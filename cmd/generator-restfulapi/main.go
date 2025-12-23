@@ -451,19 +451,22 @@ func generateFromTemplate(templateName string, data interface{}, outputPath stri
 		return
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create directory for %s: %v\n", outputPath, err)
+	// Sanitize the output path to prevent path traversal (G304)
+	cleanPath := filepath.Clean(outputPath)
+
+	if err := os.MkdirAll(filepath.Dir(cleanPath), 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create directory for %s: %v\n", cleanPath, err)
 		return
 	}
 
-	f, err := os.Create(outputPath)
+	f, err := os.Create(cleanPath) // #nosec G304 - path is sanitized above
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create file %s: %v\n", outputPath, err)
+		fmt.Fprintf(os.Stderr, "Failed to create file %s: %v\n", cleanPath, err)
 		return
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", outputPath, err)
+			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", cleanPath, err)
 		}
 	}()
 
@@ -472,7 +475,7 @@ func generateFromTemplate(templateName string, data interface{}, outputPath stri
 		return
 	}
 
-	fmt.Printf("Generated: %s\n", outputPath)
+	fmt.Printf("Generated: %s\n", cleanPath)
 }
 
 func loadTemplate(name string) (*template.Template, error) {

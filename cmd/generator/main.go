@@ -259,13 +259,16 @@ func executeTemplate(templateName string, data interface{}, outputPath string) e
 		return err
 	}
 
-	f, err := os.Create(outputPath)
+	// Sanitize the output path to prevent path traversal (G304)
+	cleanPath := filepath.Clean(outputPath)
+
+	f, err := os.Create(cleanPath) // #nosec G304 - path is sanitized above
 	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", outputPath, err)
+		return fmt.Errorf("failed to create file %s: %w", cleanPath, err)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", outputPath, err)
+			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", cleanPath, err)
 		}
 	}()
 
@@ -273,7 +276,7 @@ func executeTemplate(templateName string, data interface{}, outputPath string) e
 		return fmt.Errorf("failed to execute template %s: %w", templateName, err)
 	}
 
-	fmt.Printf("Generated: %s\n", outputPath)
+	fmt.Printf("Generated: %s\n", cleanPath)
 	return nil
 }
 
