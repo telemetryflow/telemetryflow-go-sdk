@@ -30,10 +30,20 @@ func hasIntegrationEnv() bool {
 		os.Getenv("TELEMETRYFLOW_API_KEY_SECRET") != ""
 }
 
+// Check if OTLP collector is available for integration tests
+func hasOTLPCollector() bool {
+	return os.Getenv("OTLP_COLLECTOR_AVAILABLE") == "true"
+}
+
 func TestClientLifecycle(t *testing.T) {
 	skipInShortMode(t)
 
 	t.Run("should initialize and shutdown gracefully", func(t *testing.T) {
+		// Skip if no OTLP collector is available (CI environment)
+		if !hasOTLPCollector() {
+			t.Skip("Skipping: OTLP_COLLECTOR_AVAILABLE not set (no collector in CI)")
+		}
+
 		creds, err := domain.NewCredentials("tfk_test123", "tfs_secret456")
 		require.NoError(t, err)
 
@@ -69,6 +79,11 @@ func TestClientLifecycle(t *testing.T) {
 	})
 
 	t.Run("should not initialize twice", func(t *testing.T) {
+		// Skip if no OTLP collector is available (CI environment)
+		if !hasOTLPCollector() {
+			t.Skip("Skipping: OTLP_COLLECTOR_AVAILABLE not set (no collector in CI)")
+		}
+
 		creds, _ := domain.NewCredentials("tfk_test", "tfs_secret")
 		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "test-service")
 		config.WithInsecure(true)
