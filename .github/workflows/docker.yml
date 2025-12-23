@@ -58,7 +58,7 @@ on:
 
 env:
   REGISTRY_DOCKER: docker.io
-  IMAGE_NAME: telemetryflow/telemetryflow-sdk
+  IMAGE_NAME: telemetryflow/telemetryflow-go-sdk
   PRODUCT_NAME: TelemetryFlow Go SDK
 
 permissions:

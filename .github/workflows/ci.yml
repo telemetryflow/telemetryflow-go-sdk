@@ -13,7 +13,7 @@
 #
 # =============================================================================
 
-name: CI
+name: CI - TFO SDK
 
 on:
   push:
@@ -21,8 +21,13 @@ on:
       - main
       - master
       - develop
+      - 'feature/**'
+      - 'release/**'
     paths:
-      - '**.go'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'tests/**'
       - 'go.mod'
       - 'go.sum'
       - '.github/workflows/ci.yml'
@@ -30,11 +35,26 @@ on:
     branches:
       - main
       - master
+      - develop
     paths:
-      - '**.go'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'tests/**'
       - 'go.mod'
       - 'go.sum'
   workflow_dispatch:
+    inputs:
+      run_e2e:
+        description: 'Run E2E tests'
+        required: false
+        type: boolean
+        default: false
+      skip_lint:
+        description: 'Skip linting'
+        required: false
+        type: boolean
+        default: false
 
 env:
   GO_VERSION: '1.24'
@@ -42,15 +62,17 @@ env:
 
 permissions:
   contents: read
+  security-events: write
   pull-requests: write
 
 jobs:
   # ===========================================================================
-  # Lint
+  # Code Quality - Lint, Vet, Format
   # ===========================================================================
   lint:
-    name: Lint
+    name: Lint & Code Quality
     runs-on: ubuntu-latest
+    if: ${{ !inputs.skip_lint }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,11 +83,35 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Run golangci-lint
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "The following files need formatting:"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Run staticcheck
+        run: staticcheck ./...
+
+      - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
           args: --timeout=5m
+          skip-cache: false
 
   # ===========================================================================
   # Unit Tests
@@ -73,6 +119,8 @@ jobs:
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -88,7 +136,7 @@ jobs:
 
       - name: Run unit tests
         run: |
-          go test -v -race -short -coverprofile=coverage-unit.out ./tests/unit/...
+          go test -v -race -timeout 5m -coverprofile=coverage-unit.out -covermode=atomic ./tests/unit/...
 
       - name: Upload unit test coverage
         uses: actions/upload-artifact@v4
@@ -103,7 +151,8 @@ jobs:
   test-integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: test-unit
+    needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -139,7 +188,8 @@ jobs:
   test-e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: test-integration
+    needs: [test-unit, test-integration]
+    if: ${{ inputs.run_e2e == true || github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -163,15 +213,32 @@ jobs:
           BUILD_DIR: ./build
 
   # ===========================================================================
-  # Build Generators
+  # Build Verification Generators
   # ===========================================================================
   build:
-    name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    needs: [lint, test-unit]
+    name: Build (${{ matrix.os }}/${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+          - os: linux
+            arch: arm64
+            runner: ubuntu-latest
+          - os: darwin
+            arch: amd64
+            runner: macos-latest
+          - os: darwin
+            arch: arm64
+            runner: macos-latest
+          - os: windows
+            arch: amd64
+            runner: windows-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -208,12 +275,47 @@ jobs:
           .\build\telemetryflow-restapi.exe version
 
   # ===========================================================================
+  # Security Scan
+  # ===========================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out gosec-results.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: gosec-results.sarif
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./... || true
+
+  # ===========================================================================
   # Coverage Report
   # ===========================================================================
   coverage:
     name: Coverage Report
     runs-on: ubuntu-latest
     needs: [test-unit, test-integration]
+    if: always() && needs.test-unit.result == 'success'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -228,27 +330,42 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-unit
-          path: .
+          path: coverage/
 
       - name: Download integration coverage
         uses: actions/download-artifact@v4
         with:
           name: coverage-integration
-          path: .
+          path: coverage/
+        continue-on-error: true
+
+      - name: Merge coverage files
+        run: |
+          go install github.com/wadey/gocovmerge@latest
+          if [ -f coverage/coverage-integration.out ]; then
+            gocovmerge coverage/coverage-unit.out coverage/coverage-integration.out > coverage/coverage-merged.out
+          else
+            cp coverage/coverage-unit.out coverage/coverage-merged.out
+          fi
 
       - name: Generate coverage report
         run: |
-          go tool cover -html=coverage-unit.out -o coverage-unit.html
-          go tool cover -html=coverage-integration.out -o coverage-integration.html
+          go tool cover -func=coverage/coverage-merged.out | tee coverage/coverage-summary.txt
+          go tool cover -html=coverage/coverage-merged.out -o coverage/coverage.html
 
-      - name: Upload coverage HTML
+      - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
-          path: |
-            coverage-unit.html
-            coverage-integration.html
+          name: coverage-report
+          path: coverage/
           retention-days: 30
+
+      - name: Coverage summary
+        run: |
+          echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage-summary.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   # ===========================================================================
   # Summary
@@ -256,17 +373,32 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint, test-unit, test-integration, test-e2e, build]
+    needs: [lint, test-unit, test-integration, build, security, coverage]
     if: always()
     steps:
-      - name: Summary
+      - name: Generate summary
         run: |
-          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ${{ env.PRODUCT_NAME }} - CI Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.test-unit.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Integration Tests | ${{ needs.test-integration.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| E2E Tests | ${{ needs.test-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Coverage | ${{ needs.coverage.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          if [[ "${{ needs.lint.result }}" == "failure" ]] || \
+             [[ "${{ needs.test-unit.result }}" == "failure" ]] || \
+             [[ "${{ needs.build.result }}" == "failure" ]]; then
+            echo "CI failed - one or more required jobs failed"
+            exit 1
+          fi
+          echo "CI passed successfully"
