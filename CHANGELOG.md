@@ -2,7 +2,7 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tfo-logo-sdk-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="docs/assets/tfo-logo-sdk-light.svg">
-    <img alt="TelemetryFlow SDK Logo" src="docs/assets/tfo-logo-sdk-light.svg" width="400">
+    <img alt="TelemetryFlow SDK Logo" src="docs/assets/tfo-logo-sdk-light.svg" width="80%">
   </picture>
 </p>
 
