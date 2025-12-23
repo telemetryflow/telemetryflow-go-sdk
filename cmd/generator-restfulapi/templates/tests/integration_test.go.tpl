@@ -5,19 +5,78 @@
 package tests
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"{{.ModulePath}}/tests/fixtures"
 )
 
-func TestHealthEndpoint(t *testing.T) {
+// =============================================================================
+// Test Configuration & Helpers
+// =============================================================================
+
+// skipInShortMode skips the test if running in short mode
+func skipInShortMode(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+}
+
+// hasIntegrationEnv checks if integration test environment variables are set
+func hasIntegrationEnv() bool {
+	requiredVars := []string{
+		"{{.EnvPrefix}}_DB_HOST",
+		"{{.EnvPrefix}}_DB_PORT",
+	}
+
+	for _, v := range requiredVars {
+		if os.Getenv(v) == "" {
+			return false
+		}
+	}
+	return true
+}
+
+// skipWithoutIntegrationEnv skips the test if integration environment is not configured
+func skipWithoutIntegrationEnv(t *testing.T) {
+	if !hasIntegrationEnv() {
+		t.Skip("Skipping integration test: required environment variables not set")
+	}
+}
+
+// createIntegrationContext creates a context with timeout for integration tests
+func createIntegrationContext(t *testing.T) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 30*time.Second)
+}
+
+// setupIntegrationEnv sets up environment variables for integration tests
+func setupIntegrationEnv(t *testing.T) func() {
+	return fixtures.SetEnvVars(map[string]string{
+		"{{.EnvPrefix}}_DB_HOST":     "localhost",
+		"{{.EnvPrefix}}_DB_PORT":     "5432",
+		"{{.EnvPrefix}}_DB_NAME":     "{{.ProjectName}}_test",
+		"{{.EnvPrefix}}_DB_USER":     "test",
+		"{{.EnvPrefix}}_DB_PASSWORD": "test",
+		"{{.EnvPrefix}}_LOG_LEVEL":   "debug",
+		"{{.EnvPrefix}}_ENV":         "test",
+	})
+}
+
+// =============================================================================
+// Health Endpoint Tests
+// =============================================================================
+
+func TestHealthEndpoint(t *testing.T) {
+	skipInShortMode(t)
 
 	e := echo.New()
 
@@ -38,18 +97,36 @@ func TestHealthEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Contains(t, rec.Body.String(), "healthy")
 	})
+
+	t.Run("should include service name", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/health", nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		var response map[string]string
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+		assert.Equal(t, "{{.ServiceName}}", response["service"])
+	})
 }
 
+// =============================================================================
+// Readiness Endpoint Tests
+// =============================================================================
+
 func TestReadinessEndpoint(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	skipInShortMode(t)
 
 	e := echo.New()
 
 	e.GET("/ready", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{
+		return c.JSON(http.StatusOK, map[string]interface{}{
 			"status": "ready",
+			"checks": map[string]string{
+				"database": "connected",
+				"cache":    "connected",
+			},
 		})
 	})
 
@@ -61,19 +138,39 @@ func TestReadinessEndpoint(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
+
+	t.Run("should include dependency checks", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/ready", nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		var response map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		checks, ok := response["checks"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, checks, "database")
+		assert.Contains(t, checks, "cache")
+	})
 }
 
+// =============================================================================
+// API Version Endpoint Tests
+// =============================================================================
+
 func TestAPIVersionEndpoint(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
-	}
+	skipInShortMode(t)
 
 	e := echo.New()
 
 	e.GET("/version", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
-			"version": "{{.ServiceVersion}}",
-			"service": "{{.ServiceName}}",
+			"version":    "{{.ServiceVersion}}",
+			"service":    "{{.ServiceName}}",
+			"build_time": "2024-01-01T00:00:00Z",
+			"git_commit": "abc1234",
 		})
 	})
 
@@ -84,7 +181,295 @@ func TestAPIVersionEndpoint(t *testing.T) {
 		e.ServeHTTP(rec, req)
 
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.Contains(t, rec.Body.String(), "version")
-		assert.Contains(t, rec.Body.String(), "service")
+
+		var response map[string]string
+		err := json.Unmarshal(rec.Body.Bytes(), &response)
+		require.NoError(t, err)
+
+		assert.Equal(t, "{{.ServiceVersion}}", response["version"])
+		assert.Equal(t, "{{.ServiceName}}", response["service"])
+		assert.NotEmpty(t, response["build_time"])
+		assert.NotEmpty(t, response["git_commit"])
+	})
+}
+
+// =============================================================================
+// Database Integration Tests
+// =============================================================================
+
+func TestDatabaseConnection(t *testing.T) {
+	skipInShortMode(t)
+	skipWithoutIntegrationEnv(t)
+
+	ctx, cancel := createIntegrationContext(t)
+	defer cancel()
+
+	cleanup := setupIntegrationEnv(t)
+	defer cleanup()
+
+	t.Run("should connect to database", func(t *testing.T) {
+		// Note: Replace with actual database connection test
+		_ = ctx
+		assert.True(t, true, "Database connection test placeholder")
+	})
+
+	t.Run("should handle connection timeout", func(t *testing.T) {
+		// Note: Replace with actual timeout test
+		assert.True(t, true, "Connection timeout test placeholder")
+	})
+}
+
+// =============================================================================
+// Repository Integration Tests
+// =============================================================================
+
+func TestRepositoryIntegration(t *testing.T) {
+	skipInShortMode(t)
+	skipWithoutIntegrationEnv(t)
+
+	ctx, cancel := createIntegrationContext(t)
+	defer cancel()
+
+	cleanup := setupIntegrationEnv(t)
+	defer cleanup()
+
+	t.Run("should create and retrieve entity", func(t *testing.T) {
+		// arrange
+		entity := fixtures.GetSampleEntity()
+		_ = ctx
+		_ = entity
+
+		// Note: Replace with actual repository test
+		assert.True(t, true, "Repository create/retrieve test placeholder")
+	})
+
+	t.Run("should update entity", func(t *testing.T) {
+		// Note: Replace with actual update test
+		assert.True(t, true, "Repository update test placeholder")
+	})
+
+	t.Run("should delete entity", func(t *testing.T) {
+		// Note: Replace with actual delete test
+		assert.True(t, true, "Repository delete test placeholder")
+	})
+
+	t.Run("should handle not found error", func(t *testing.T) {
+		// Note: Replace with actual not found test
+		assert.True(t, true, "Repository not found test placeholder")
+	})
+}
+
+// =============================================================================
+// API Integration Tests with Table-Driven Approach
+// =============================================================================
+
+func TestAPIEndpointsIntegration(t *testing.T) {
+	skipInShortMode(t)
+
+	e := echo.New()
+
+	// Setup routes
+	api := e.Group("/api/v1")
+	api.GET("/entities", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"data": []interface{}{},
+			"meta": map[string]interface{}{
+				"total":  0,
+				"offset": 0,
+				"limit":  10,
+			},
+		})
+	})
+
+	testCases := []struct {
+		name           string
+		method         string
+		path           string
+		expectedStatus int
+		expectedBody   string
+	}{
+		{
+			name:           "list entities returns 200",
+			method:         http.MethodGet,
+			path:           "/api/v1/entities",
+			expectedStatus: http.StatusOK,
+			expectedBody:   "data",
+		},
+		{
+			name:           "unknown path returns 404",
+			method:         http.MethodGet,
+			path:           "/api/v1/unknown",
+			expectedStatus: http.StatusNotFound,
+			expectedBody:   "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			assert.Equal(t, tc.expectedStatus, rec.Code)
+			if tc.expectedBody != "" {
+				assert.Contains(t, rec.Body.String(), tc.expectedBody)
+			}
+		})
+	}
+}
+
+// =============================================================================
+// Authentication Integration Tests
+// =============================================================================
+
+func TestAuthenticationIntegration(t *testing.T) {
+	skipInShortMode(t)
+
+	e := echo.New()
+
+	// Setup protected route
+	e.GET("/api/v1/protected", func(c echo.Context) error {
+		authHeader := c.Request().Header.Get("Authorization")
+		if authHeader == "" {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
+		}
+		return c.JSON(http.StatusOK, map[string]string{"message": "authorized"})
+	})
+
+	t.Run("should reject request without auth header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/protected", nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rec.Code)
+	})
+
+	t.Run("should accept request with valid auth header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/protected", nil)
+		req.Header.Set("Authorization", "Bearer valid-token")
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+}
+
+// =============================================================================
+// Rate Limiting Integration Tests
+// =============================================================================
+
+func TestRateLimitingIntegration(t *testing.T) {
+	skipInShortMode(t)
+
+	// Note: Replace with actual rate limiting implementation
+	t.Run("should enforce rate limits", func(t *testing.T) {
+		// Placeholder for rate limiting test
+		assert.True(t, true, "Rate limiting test placeholder")
+	})
+}
+
+// =============================================================================
+// Cache Integration Tests
+// =============================================================================
+
+func TestCacheIntegration(t *testing.T) {
+	skipInShortMode(t)
+	skipWithoutIntegrationEnv(t)
+
+	ctx, cancel := createIntegrationContext(t)
+	defer cancel()
+
+	t.Run("should cache and retrieve data", func(t *testing.T) {
+		_ = ctx
+		// Note: Replace with actual cache test
+		assert.True(t, true, "Cache integration test placeholder")
+	})
+
+	t.Run("should expire cached data", func(t *testing.T) {
+		_ = ctx
+		// Note: Replace with actual expiry test
+		assert.True(t, true, "Cache expiry test placeholder")
+	})
+}
+
+// =============================================================================
+// Environment Variable Tests
+// =============================================================================
+
+func TestEnvironmentConfiguration(t *testing.T) {
+	t.Run("should load configuration from environment", func(t *testing.T) {
+		cleanup := fixtures.SetEnvVars(map[string]string{
+			"{{.EnvPrefix}}_PORT":      "8080",
+			"{{.EnvPrefix}}_LOG_LEVEL": "info",
+		})
+		defer cleanup()
+
+		assert.Equal(t, "8080", os.Getenv("{{.EnvPrefix}}_PORT"))
+		assert.Equal(t, "info", os.Getenv("{{.EnvPrefix}}_LOG_LEVEL"))
+	})
+
+	t.Run("should restore original environment after test", func(t *testing.T) {
+		originalValue := os.Getenv("{{.EnvPrefix}}_TEST_VAR")
+
+		cleanup := fixtures.SetEnvVars(map[string]string{
+			"{{.EnvPrefix}}_TEST_VAR": "test-value",
+		})
+
+		assert.Equal(t, "test-value", os.Getenv("{{.EnvPrefix}}_TEST_VAR"))
+
+		cleanup()
+
+		assert.Equal(t, originalValue, os.Getenv("{{.EnvPrefix}}_TEST_VAR"))
+	})
+}
+
+// =============================================================================
+// Middleware Integration Tests
+// =============================================================================
+
+func TestMiddlewareIntegration(t *testing.T) {
+	skipInShortMode(t)
+
+	e := echo.New()
+
+	// Request ID middleware simulation
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set("X-Request-ID", "test-request-id")
+			return next(c)
+		}
+	})
+
+	e.GET("/test", func(c echo.Context) error {
+		return c.String(http.StatusOK, "OK")
+	})
+
+	t.Run("should add request ID header", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		rec := httptest.NewRecorder()
+
+		e.ServeHTTP(rec, req)
+
+		assert.Equal(t, "test-request-id", rec.Header().Get("X-Request-ID"))
+	})
+}
+
+// =============================================================================
+// Graceful Shutdown Tests
+// =============================================================================
+
+func TestGracefulShutdown(t *testing.T) {
+	skipInShortMode(t)
+
+	t.Run("should handle graceful shutdown", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// Note: Replace with actual shutdown test
+		_ = ctx
+		assert.True(t, true, "Graceful shutdown test placeholder")
 	})
 }
