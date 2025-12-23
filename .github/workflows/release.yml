@@ -350,12 +350,21 @@ jobs:
         with:
           path: artifacts
           pattern: package-*
+          merge-multiple: true
 
       - name: Prepare release assets
         run: |
           mkdir -p release
+          echo "=== Downloaded artifacts ==="
+          find artifacts -type f -ls
+          echo "=== Copying to release ==="
           find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+          echo "=== Release directory contents ==="
           ls -la release/
+          if [ -z "$(ls -A release/)" ]; then
+            echo "ERROR: No release assets found!"
+            exit 1
+          fi
 
       - name: Generate checksums
         run: |
@@ -363,13 +372,27 @@ jobs:
           sha256sum * > checksums-sha256.txt
           cat checksums-sha256.txt
 
+      - name: Create tag if not exists (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          TAG_NAME="v${{ needs.prepare.outputs.version }}"
+          if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
+            git push origin "$TAG_NAME"
+            echo "Created tag: $TAG_NAME"
+          else
+            echo "Tag $TAG_NAME already exists"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           name: "${{ env.PRODUCT_NAME }} v${{ needs.prepare.outputs.version }}"
           tag_name: "v${{ needs.prepare.outputs.version }}"
           draft: false
-          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.prerelease == 'true' }}
           generate_release_notes: true
           files: |
             release/*
