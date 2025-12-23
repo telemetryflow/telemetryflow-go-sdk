@@ -52,17 +52,20 @@ func TestClientLifecycle(t *testing.T) {
 		// Note: Initialize will fail without actual OTLP endpoint
 		// This test just verifies the lifecycle methods exist and work
 		err = client.Initialize(ctx)
-		// We expect this to potentially fail in test environment
-		if err == nil {
-			assert.True(t, client.IsInitialized())
-
-			// Shutdown
-			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-			err = client.Shutdown(shutdownCtx)
-			assert.NoError(t, err)
-			assert.False(t, client.IsInitialized())
+		// We expect this to potentially fail in test environment without collector
+		if err != nil {
+			t.Skipf("Skipping: OTLP collector not available at localhost:4317 (%v)", err)
+			return
 		}
+
+		assert.True(t, client.IsInitialized())
+
+		// Shutdown
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		err = client.Shutdown(shutdownCtx)
+		assert.NoError(t, err)
+		assert.False(t, client.IsInitialized())
 	})
 
 	t.Run("should not initialize twice", func(t *testing.T) {

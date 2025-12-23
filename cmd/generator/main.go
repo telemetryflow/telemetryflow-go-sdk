@@ -80,7 +80,7 @@ func main() {
 	initCmd.Flags().BoolVar(&enableLogs, "logs", true, "Enable logs")
 	initCmd.Flags().BoolVar(&enableTraces, "traces", true, "Enable traces")
 	initCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory")
-	initCmd.MarkFlagRequired("project")
+	_ = initCmd.MarkFlagRequired("project")
 
 	// Config command flags
 	configCmd.Flags().StringVarP(&apiKeyID, "key-id", "k", "", "TelemetryFlow API Key ID")

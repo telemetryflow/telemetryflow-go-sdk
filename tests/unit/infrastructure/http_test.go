@@ -106,7 +106,7 @@ func TestHTTPResponsePatterns(t *testing.T) {
 func TestHTTPMiddlewarePatterns(t *testing.T) {
 	t.Run("should add CORS headers", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		corsMiddleware := func(next http.Handler) http.Handler {
@@ -133,7 +133,7 @@ func TestHTTPMiddlewarePatterns(t *testing.T) {
 				w.WriteHeader(http.StatusNoContent)
 				return
 			}
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		req := httptest.NewRequest("OPTIONS", "/test", nil)
@@ -155,7 +155,7 @@ func TestHTTPMiddlewarePatterns(t *testing.T) {
 		}
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		req := httptest.NewRequest("GET", "/api/users", nil)
@@ -280,7 +280,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 				Success: true,
 				Data:    req,
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		})
 
 		body := `{"name": "John", "email": "john@example.com"}`
@@ -293,7 +293,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var response APIResponse
-		json.NewDecoder(rec.Body).Decode(&response)
+		_ = json.NewDecoder(rec.Body).Decode(&response)
 		assert.True(t, response.Success)
 	})
 
@@ -308,7 +308,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 			defer r.Body.Close()
 
 			var req CreateRequest
-			json.Unmarshal(body, &req)
+			_ = json.Unmarshal(body, &req)
 
 			if req.Name == "" || req.Email == "" {
 				response := APIResponse{
@@ -319,11 +319,11 @@ func TestHTTPRequestHandling(t *testing.T) {
 					},
 				}
 				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(response)
+				_ = json.NewEncoder(w).Encode(response)
 				return
 			}
 
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		body := `{"name": "", "email": ""}`
@@ -344,7 +344,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 				"page":  page,
 				"limit": limit,
 			}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		})
 
 		req := httptest.NewRequest("GET", "/api/users?page=2&limit=10", nil)
@@ -353,7 +353,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 
 		var response map[string]string
-		json.NewDecoder(rec.Body).Decode(&response)
+		_ = json.NewDecoder(rec.Body).Decode(&response)
 
 		assert.Equal(t, "2", response["page"])
 		assert.Equal(t, "10", response["limit"])
@@ -372,7 +372,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			id := extractPathParam(r.URL.Path, "/api/users/{id}")
 			response := map[string]string{"id": id}
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		})
 
 		req := httptest.NewRequest("GET", "/api/users/123", nil)
@@ -381,7 +381,7 @@ func TestHTTPRequestHandling(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 
 		var response map[string]string
-		json.NewDecoder(rec.Body).Decode(&response)
+		_ = json.NewDecoder(rec.Body).Decode(&response)
 
 		assert.Equal(t, "123", response["id"])
 	})

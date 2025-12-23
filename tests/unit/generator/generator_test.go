@@ -5,7 +5,6 @@
 package generator_test
 
 import (
-	"embed"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,9 +31,6 @@ type TemplateData struct {
 	NumWorkers    int
 	QueueSize     int
 }
-
-//go:embed testdata/*.tpl
-var testTemplateFS embed.FS
 
 func TestTemplateDataDefaults(t *testing.T) {
 	t.Run("should have default values", func(t *testing.T) {

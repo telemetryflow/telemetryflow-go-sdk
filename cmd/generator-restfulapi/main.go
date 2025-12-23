@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/telemetryflow/telemetryflow-go-sdk/internal/version"
 	"github.com/telemetryflow/telemetryflow-go-sdk/pkg/banner"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 //go:embed all:templates
@@ -138,13 +140,13 @@ func main() {
 	newCmd.Flags().BoolVar(&enableAuth, "auth", true, "Enable JWT authentication")
 	newCmd.Flags().BoolVar(&enableRateLimit, "rate-limit", true, "Enable rate limiting")
 	newCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory")
-	newCmd.MarkFlagRequired("name")
+	_ = newCmd.MarkFlagRequired("name")
 
 	// Entity command flags
 	entityCmd.Flags().StringVarP(&entityName, "name", "n", "", "Entity name (e.g., User, Product)")
 	entityCmd.Flags().StringVarP(&entityFields, "fields", "f", "", "Entity fields (e.g., 'name:string,email:string,age:int')")
 	entityCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Project root directory")
-	entityCmd.MarkFlagRequired("name")
+	_ = entityCmd.MarkFlagRequired("name")
 
 	// Docs command flags
 	docsCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Project root directory")
@@ -473,10 +475,11 @@ func loadTemplate(name string) (*template.Template, error) {
 	var content []byte
 	var err error
 
+	titleCaser := cases.Title(language.English)
 	funcMap := template.FuncMap{
 		"lower":      strings.ToLower,
 		"upper":      strings.ToUpper,
-		"title":      strings.Title,
+		"title":      titleCaser.String,
 		"pascal":     toPascalCase,
 		"camel":      toCamelCase,
 		"snake":      toSnakeCase,
@@ -561,11 +564,12 @@ func mapTypeToGo(t string) string {
 }
 
 func toPascalCase(s string) string {
+	titleCaser := cases.Title(language.English)
 	words := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '_' || r == '-' || r == ' '
 	})
 	for i, word := range words {
-		words[i] = strings.Title(strings.ToLower(word))
+		words[i] = titleCaser.String(strings.ToLower(word))
 	}
 	return strings.Join(words, "")
 }

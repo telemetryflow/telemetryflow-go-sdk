@@ -54,8 +54,8 @@ func TestE2E_FullTelemetryPipeline(t *testing.T) {
 		defer func() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
-			client.Flush(shutdownCtx)
-			client.Shutdown(shutdownCtx)
+			_ = client.Flush(shutdownCtx)
+			_ = client.Shutdown(shutdownCtx)
 		}()
 
 		assert.True(t, client.IsInitialized())
@@ -128,8 +128,8 @@ func TestE2E_MetricsBatch(t *testing.T) {
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
 		defer func() {
-			client.Flush(ctx)
-			client.Shutdown(ctx)
+			_ = client.Flush(ctx)
+			_ = client.Shutdown(ctx)
 		}()
 
 		// Send batch of metrics
@@ -157,8 +157,8 @@ func TestE2E_ConcurrentTelemetry(t *testing.T) {
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
 		defer func() {
-			client.Flush(ctx)
-			client.Shutdown(ctx)
+			_ = client.Flush(ctx)
+			_ = client.Shutdown(ctx)
 		}()
 
 		var wg sync.WaitGroup
@@ -330,7 +330,7 @@ func TestE2E_GracefulShutdown(t *testing.T) {
 
 		// Send a batch of telemetry
 		for i := 0; i < 50; i++ {
-			client.IncrementCounter(ctx, "e2e.shutdown.counter", 1, map[string]interface{}{
+			_ = client.IncrementCounter(ctx, "e2e.shutdown.counter", 1, map[string]interface{}{
 				"batch": i,
 			})
 		}

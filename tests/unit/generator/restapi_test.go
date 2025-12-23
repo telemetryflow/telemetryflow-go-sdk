@@ -13,6 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // RESTAPITemplateData mirrors the generator's TemplateData struct for testing
@@ -231,11 +233,12 @@ func TestCaseConversions(t *testing.T) {
 }
 
 func toPascalCase(s string) string {
+	titleCaser := cases.Title(language.English)
 	words := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '_' || r == '-' || r == ' '
 	})
 	for i, word := range words {
-		words[i] = strings.Title(strings.ToLower(word))
+		words[i] = titleCaser.String(strings.ToLower(word))
 	}
 	return strings.Join(words, "")
 }
