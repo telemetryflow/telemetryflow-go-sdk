@@ -82,18 +82,18 @@ func TestBuilder_WithEndpoint(t *testing.T) {
 	t.Run("should set custom endpoint", func(t *testing.T) {
 		client, err := telemetryflow.NewBuilder().
 			WithAPIKey("tfk_test", "tfs_secret").
-			WithEndpoint("custom.endpoint.io:4317").
+			WithEndpoint("custom.endpoint.id:4317").
 			WithService("test-service", "1.0.0").
 			Build()
 
 		require.NoError(t, err)
-		assert.Equal(t, "custom.endpoint.io:4317", client.Config().Endpoint())
+		assert.Equal(t, "custom.endpoint.id:4317", client.Config().Endpoint())
 	})
 }
 
 func TestBuilder_WithEndpointFromEnv(t *testing.T) {
 	t.Run("should read endpoint from environment", func(t *testing.T) {
-		os.Setenv("TELEMETRYFLOW_ENDPOINT", "env.endpoint.io:4317")
+		os.Setenv("TELEMETRYFLOW_ENDPOINT", "env.endpoint.id:4317")
 		defer os.Unsetenv("TELEMETRYFLOW_ENDPOINT")
 
 		client, err := telemetryflow.NewBuilder().
@@ -103,7 +103,7 @@ func TestBuilder_WithEndpointFromEnv(t *testing.T) {
 			Build()
 
 		require.NoError(t, err)
-		assert.Equal(t, "env.endpoint.io:4317", client.Config().Endpoint())
+		assert.Equal(t, "env.endpoint.id:4317", client.Config().Endpoint())
 	})
 
 	t.Run("should use default when env not set", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestBuilder_WithEndpointFromEnv(t *testing.T) {
 			Build()
 
 		require.NoError(t, err)
-		assert.Equal(t, "api.telemetryflow.io:4317", client.Config().Endpoint())
+		assert.Equal(t, "api.telemetryflow.id:4317", client.Config().Endpoint())
 	})
 }
 
@@ -287,7 +287,7 @@ func TestBuilder_WithAutoConfiguration(t *testing.T) {
 		// Set all environment variables
 		os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_auto_test")
 		os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_auto_secret")
-		os.Setenv("TELEMETRYFLOW_ENDPOINT", "auto.endpoint.io:4317")
+		os.Setenv("TELEMETRYFLOW_ENDPOINT", "auto.endpoint.id:4317")
 		os.Setenv("TELEMETRYFLOW_SERVICE_NAME", "auto-service")
 		os.Setenv("TELEMETRYFLOW_SERVICE_VERSION", "3.0.0")
 		os.Setenv("ENV", "production")
@@ -307,7 +307,7 @@ func TestBuilder_WithAutoConfiguration(t *testing.T) {
 		require.NoError(t, err)
 		config := client.Config()
 		assert.Equal(t, "tfk_auto_test", config.Credentials().KeyID())
-		assert.Equal(t, "auto.endpoint.io:4317", config.Endpoint())
+		assert.Equal(t, "auto.endpoint.id:4317", config.Endpoint())
 		assert.Equal(t, "auto-service", config.ServiceName())
 		assert.Equal(t, "production", config.Environment())
 	})
@@ -386,7 +386,7 @@ func TestBuilder_MethodChaining(t *testing.T) {
 			WithEnvironment("production").
 			WithGRPC().
 			WithInsecure(false).
-			WithTimeout(30 * time.Second).
+			WithTimeout(30*time.Second).
 			WithSignals(true, true, true).
 			WithCustomAttribute("team", "backend").
 			WithCustomAttribute("region", "us-east-1").

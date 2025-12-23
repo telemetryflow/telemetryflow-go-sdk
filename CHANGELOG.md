@@ -95,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Improved ASCII diagrams converted to Mermaid for better rendering on GitHub
+- Fixed test assertion for default endpoint in `builder_test.go` (`.io` → `.id`)
 
 ## [1.0.0] - 2024-12-01
 
