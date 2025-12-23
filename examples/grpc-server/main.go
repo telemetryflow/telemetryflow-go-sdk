@@ -44,9 +44,9 @@ type (
 
 	// StreamServerInfo represents information about a streaming RPC
 	StreamServerInfo struct {
-		FullMethod   string
-		Service      string
-		Method       string
+		FullMethod     string
+		Service        string
+		Method         string
 		IsClientStream bool
 		IsServerStream bool
 	}
@@ -139,9 +139,9 @@ func UnaryServerInterceptor(ctx context.Context, info *UnaryServerInfo, handler 
 
 	// Start span for RPC
 	spanID, err := client.StartSpan(ctx, info.FullMethod, "server", map[string]interface{}{
-		"rpc.system":  "grpc",
-		"rpc.service": info.Service,
-		"rpc.method":  info.Method,
+		"rpc.system":           "grpc",
+		"rpc.service":          info.Service,
+		"rpc.method":           info.Method,
 		"rpc.grpc.status_code": 0, // Will be updated
 	})
 	if err != nil {
@@ -215,9 +215,9 @@ func StreamServerInterceptor(ctx context.Context, info *StreamServerInfo, handle
 
 	// Start span for stream
 	spanID, _ := client.StartSpan(ctx, info.FullMethod, "server", map[string]interface{}{
-		"rpc.system":      "grpc",
-		"rpc.service":     info.Service,
-		"rpc.method":      info.Method,
+		"rpc.system":       "grpc",
+		"rpc.service":      info.Service,
+		"rpc.method":       info.Method,
 		"grpc.stream_type": streamType,
 	})
 

@@ -271,18 +271,18 @@ func TestDatabaseQueryPatterns(t *testing.T) {
 
 func TestDatabaseTypeMapping(t *testing.T) {
 	typeMap := map[string]struct {
-		goType   string
-		pgType   string
+		goType    string
+		pgType    string
 		mysqlType string
 	}{
-		"string":    {"string", "VARCHAR(255)", "VARCHAR(255)"},
-		"text":      {"string", "TEXT", "TEXT"},
-		"int":       {"int", "INTEGER", "INT"},
-		"int64":     {"int64", "BIGINT", "BIGINT"},
-		"float64":   {"float64", "DECIMAL(10,2)", "DECIMAL(10,2)"},
-		"bool":      {"bool", "BOOLEAN", "BOOLEAN"},
-		"time":      {"time.Time", "TIMESTAMP", "DATETIME"},
-		"uuid":      {"uuid.UUID", "UUID", "CHAR(36)"},
+		"string":  {"string", "VARCHAR(255)", "VARCHAR(255)"},
+		"text":    {"string", "TEXT", "TEXT"},
+		"int":     {"int", "INTEGER", "INT"},
+		"int64":   {"int64", "BIGINT", "BIGINT"},
+		"float64": {"float64", "DECIMAL(10,2)", "DECIMAL(10,2)"},
+		"bool":    {"bool", "BOOLEAN", "BOOLEAN"},
+		"time":    {"time.Time", "TIMESTAMP", "DATETIME"},
+		"uuid":    {"uuid.UUID", "UUID", "CHAR(36)"},
 	}
 
 	t.Run("should map Go types to PostgreSQL types", func(t *testing.T) {
@@ -313,8 +313,8 @@ func TestDatabaseConnectionPooling(t *testing.T) {
 		config := PoolConfig{
 			MaxOpenConns:    25,
 			MaxIdleConns:    10,
-			ConnMaxLifetime: 300,  // 5 minutes
-			ConnMaxIdleTime: 60,   // 1 minute
+			ConnMaxLifetime: 300, // 5 minutes
+			ConnMaxIdleTime: 60,  // 1 minute
 		}
 
 		assert.GreaterOrEqual(t, config.MaxOpenConns, config.MaxIdleConns)

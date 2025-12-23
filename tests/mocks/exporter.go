@@ -13,7 +13,7 @@ import (
 
 // ExportedData represents data that was exported
 type ExportedData struct {
-	Type       string                 // metrics, logs, traces
+	Type       string // metrics, logs, traces
 	Data       interface{}
 	Attributes map[string]interface{}
 }

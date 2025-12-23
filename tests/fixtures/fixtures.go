@@ -107,17 +107,17 @@ func SetEnvVars(vars map[string]string) func() {
 // DefaultEnvVars returns a map of default environment variables for testing
 func DefaultEnvVars() map[string]string {
 	return map[string]string{
-		"TELEMETRYFLOW_API_KEY_ID":     ValidCredentials.KeyID,
-		"TELEMETRYFLOW_API_KEY_SECRET": ValidCredentials.KeySecret,
-		"TELEMETRYFLOW_ENDPOINT":       "localhost:4317",
-		"TELEMETRYFLOW_SERVICE_NAME":   "test-service",
+		"TELEMETRYFLOW_API_KEY_ID":      ValidCredentials.KeyID,
+		"TELEMETRYFLOW_API_KEY_SECRET":  ValidCredentials.KeySecret,
+		"TELEMETRYFLOW_ENDPOINT":        "localhost:4317",
+		"TELEMETRYFLOW_SERVICE_NAME":    "test-service",
 		"TELEMETRYFLOW_SERVICE_VERSION": "1.0.0",
-		"TELEMETRYFLOW_ENVIRONMENT":    "test",
-		"TELEMETRYFLOW_PROTOCOL":       "grpc",
-		"TELEMETRYFLOW_INSECURE":       "true",
-		"TELEMETRYFLOW_ENABLE_METRICS": "true",
-		"TELEMETRYFLOW_ENABLE_LOGS":    "true",
-		"TELEMETRYFLOW_ENABLE_TRACES":  "true",
+		"TELEMETRYFLOW_ENVIRONMENT":     "test",
+		"TELEMETRYFLOW_PROTOCOL":        "grpc",
+		"TELEMETRYFLOW_INSECURE":        "true",
+		"TELEMETRYFLOW_ENABLE_METRICS":  "true",
+		"TELEMETRYFLOW_ENABLE_LOGS":     "true",
+		"TELEMETRYFLOW_ENABLE_TRACES":   "true",
 	}
 }
 

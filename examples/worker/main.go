@@ -40,12 +40,12 @@ type Job struct {
 
 // Worker processes jobs from a queue
 type Worker struct {
-	id       string
-	jobs     chan Job
-	quit     chan struct{}
-	wg       *sync.WaitGroup
-	client   *telemetryflow.Client
-	ctx      context.Context
+	id     string
+	jobs   chan Job
+	quit   chan struct{}
+	wg     *sync.WaitGroup
+	client *telemetryflow.Client
+	ctx    context.Context
 }
 
 func main() {

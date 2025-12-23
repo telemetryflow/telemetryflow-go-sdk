@@ -314,7 +314,7 @@ func TestTelemetryConfig_BuilderChaining(t *testing.T) {
 		result := config.
 			WithProtocol(domain.ProtocolHTTP).
 			WithInsecure(true).
-			WithTimeout(60 * time.Second).
+			WithTimeout(60*time.Second).
 			WithServiceVersion("2.0.0").
 			WithEnvironment("staging").
 			WithRetry(true, 5, 10*time.Second).

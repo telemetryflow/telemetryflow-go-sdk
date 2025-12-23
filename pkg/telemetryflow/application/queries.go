@@ -137,16 +137,16 @@ type SpanStatus struct {
 
 // SearchTracesQuery searches for traces based on criteria
 type SearchTracesQuery struct {
-	StartTime    time.Time
-	EndTime      time.Time
-	ServiceName  string
-	Operation    string
-	MinDuration  time.Duration
-	MaxDuration  time.Duration
-	Tags         map[string]string
-	HasError     *bool // filter by error status
-	Limit        int
-	Offset       int
+	StartTime   time.Time
+	EndTime     time.Time
+	ServiceName string
+	Operation   string
+	MinDuration time.Duration
+	MaxDuration time.Duration
+	Tags        map[string]string
+	HasError    *bool // filter by error status
+	Limit       int
+	Offset      int
 }
 
 // TracesSearchResult represents trace search results
@@ -202,12 +202,12 @@ type SDKStatusResult struct {
 
 // SDKStatistics represents SDK statistics
 type SDKStatistics struct {
-	MetricsSent   int64
-	LogsSent      int64
-	TracesSent    int64
-	ErrorsCount   int64
-	LastFlush     time.Time
-	QueueSize     int
+	MetricsSent int64
+	LogsSent    int64
+	TracesSent  int64
+	ErrorsCount int64
+	LastFlush   time.Time
+	QueueSize   int
 }
 
 // ===== QUERY BUS =====

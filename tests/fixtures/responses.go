@@ -95,11 +95,11 @@ var AuthResponses = map[string]HTTPResponse{
 	"rate_limited": {
 		StatusCode: 429,
 		Headers: map[string]string{
-			"Content-Type":     "application/json",
-			"Retry-After":      "60",
-			"X-RateLimit-Limit": "1000",
+			"Content-Type":          "application/json",
+			"Retry-After":           "60",
+			"X-RateLimit-Limit":     "1000",
 			"X-RateLimit-Remaining": "0",
-			"X-RateLimit-Reset": "1704067260",
+			"X-RateLimit-Reset":     "1704067260",
 		},
 		Body: `{
   "error": "rate limit exceeded",

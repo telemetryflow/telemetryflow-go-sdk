@@ -11,19 +11,19 @@ import (
 
 // Config holds banner configuration
 type Config struct {
-	ProductName   string
-	Version       string
-	Motto         string
-	GitCommit     string
-	BuildTime     string
-	GoVersion     string
-	Platform      string
-	Vendor        string
-	VendorURL     string
-	Developer     string
-	License       string
-	SupportURL    string
-	Copyright     string
+	ProductName string
+	Version     string
+	Motto       string
+	GitCommit   string
+	BuildTime   string
+	GoVersion   string
+	Platform    string
+	Vendor      string
+	VendorURL   string
+	Developer   string
+	License     string
+	SupportURL  string
+	Copyright   string
 }
 
 // DefaultConfig returns default configuration for SDK

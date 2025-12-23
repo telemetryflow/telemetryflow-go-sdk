@@ -102,7 +102,7 @@ func TestClientWithBuilder(t *testing.T) {
 			WithEnvironment("test").
 			WithGRPC().
 			WithInsecure(true).
-			WithTimeout(10 * time.Second).
+			WithTimeout(10*time.Second).
 			WithSignals(true, true, true).
 			WithCustomAttribute("test", "integration").
 			Build()
@@ -184,19 +184,19 @@ func TestClientLogsIntegration(t *testing.T) {
 
 		// Send logs at different levels
 		err = client.LogInfo(ctx, "Integration test info log", map[string]interface{}{
-			"test": "true",
+			"test":  "true",
 			"level": "info",
 		})
 		assert.NoError(t, err)
 
 		err = client.LogWarn(ctx, "Integration test warning log", map[string]interface{}{
-			"test": "true",
+			"test":  "true",
 			"level": "warn",
 		})
 		assert.NoError(t, err)
 
 		err = client.LogError(ctx, "Integration test error log", map[string]interface{}{
-			"test": "true",
+			"test":  "true",
 			"level": "error",
 		})
 		assert.NoError(t, err)
@@ -327,10 +327,10 @@ func TestSignalConfiguration(t *testing.T) {
 	skipInShortMode(t)
 
 	testCases := []struct {
-		name     string
-		metrics  bool
-		logs     bool
-		traces   bool
+		name    string
+		metrics bool
+		logs    bool
+		traces  bool
 	}{
 		{"metrics only", true, false, false},
 		{"logs only", false, true, false},

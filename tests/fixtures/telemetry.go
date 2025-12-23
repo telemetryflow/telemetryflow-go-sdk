@@ -258,8 +258,8 @@ var SampleSpans = []SpanFixture{
 		Name: "external.api.call",
 		Kind: "client",
 		Attributes: map[string]interface{}{
-			"http.method": "POST",
-			"http.url":    "https://api.payment.com/charge",
+			"http.method":  "POST",
+			"http.url":     "https://api.payment.com/charge",
 			"peer.service": "payment-gateway",
 		},
 		Events:   nil,

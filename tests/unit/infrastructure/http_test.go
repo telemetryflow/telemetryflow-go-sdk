@@ -187,7 +187,7 @@ func TestHTTPMiddlewarePatterns(t *testing.T) {
 		}
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("Authorized"))
+			_, _ = w.Write([]byte("Authorized"))
 		})
 
 		t.Run("missing auth header", func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestHTTPMiddlewarePatterns(t *testing.T) {
 		}
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		// First 3 requests should succeed
@@ -402,7 +402,7 @@ func TestHealthCheckEndpoint(t *testing.T) {
 				Version: "1.0.0",
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
+			_ = json.NewEncoder(w).Encode(response)
 		})
 
 		req := httptest.NewRequest("GET", "/health", nil)
@@ -413,7 +413,7 @@ func TestHealthCheckEndpoint(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var response HealthResponse
-		json.NewDecoder(rec.Body).Decode(&response)
+		_ = json.NewDecoder(rec.Body).Decode(&response)
 
 		assert.Equal(t, "healthy", response.Status)
 		assert.Equal(t, "test-service", response.Service)
@@ -422,7 +422,7 @@ func TestHealthCheckEndpoint(t *testing.T) {
 	t.Run("should return liveness probe", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		})
 
 		req := httptest.NewRequest("GET", "/health/live", nil)
@@ -440,11 +440,11 @@ func TestHealthCheckEndpoint(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !dbReady || !cacheReady {
 				w.WriteHeader(http.StatusServiceUnavailable)
-				w.Write([]byte("Not Ready"))
+				_, _ = w.Write([]byte("Not Ready"))
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Ready"))
+			_, _ = w.Write([]byte("Ready"))
 		})
 
 		req := httptest.NewRequest("GET", "/health/ready", nil)

@@ -30,17 +30,17 @@ type TelemetryConfig struct {
 	credentials *Credentials
 
 	// Connection settings
-	endpoint         string
-	protocol         Protocol
-	insecure         bool
-	timeout          time.Duration
-	retryEnabled     bool
-	maxRetries       int
-	retryBackoff     time.Duration
-	compressionGzip  bool
+	endpoint        string
+	protocol        Protocol
+	insecure        bool
+	timeout         time.Duration
+	retryEnabled    bool
+	maxRetries      int
+	retryBackoff    time.Duration
+	compressionGzip bool
 
 	// Signal configuration
-	enabledSignals   map[SignalType]bool
+	enabledSignals map[SignalType]bool
 
 	// Resource attributes
 	serviceName      string
@@ -49,11 +49,11 @@ type TelemetryConfig struct {
 	customAttributes map[string]string
 
 	// Batch settings
-	batchTimeout     time.Duration
-	batchMaxSize     int
+	batchTimeout time.Duration
+	batchMaxSize int
 
 	// Rate limiting (client-side)
-	rateLimit        int // requests per minute
+	rateLimit int // requests per minute
 }
 
 // NewTelemetryConfig creates a new configuration with required fields
@@ -69,15 +69,15 @@ func NewTelemetryConfig(credentials *Credentials, endpoint string, serviceName s
 	}
 
 	return &TelemetryConfig{
-		credentials:      credentials,
-		endpoint:         endpoint,
-		protocol:         ProtocolGRPC, // default
-		insecure:         false,
-		timeout:          30 * time.Second,
-		retryEnabled:     true,
-		maxRetries:       3,
-		retryBackoff:     5 * time.Second,
-		compressionGzip:  true,
+		credentials:     credentials,
+		endpoint:        endpoint,
+		protocol:        ProtocolGRPC, // default
+		insecure:        false,
+		timeout:         30 * time.Second,
+		retryEnabled:    true,
+		maxRetries:      3,
+		retryBackoff:    5 * time.Second,
+		compressionGzip: true,
 		enabledSignals: map[SignalType]bool{
 			SignalMetrics: true,
 			SignalLogs:    true,
@@ -94,22 +94,22 @@ func NewTelemetryConfig(credentials *Credentials, endpoint string, serviceName s
 }
 
 // Getters for immutability
-func (c *TelemetryConfig) Credentials() *Credentials        { return c.credentials }
-func (c *TelemetryConfig) Endpoint() string                 { return c.endpoint }
-func (c *TelemetryConfig) Protocol() Protocol               { return c.protocol }
-func (c *TelemetryConfig) IsInsecure() bool                 { return c.insecure }
-func (c *TelemetryConfig) Timeout() time.Duration           { return c.timeout }
-func (c *TelemetryConfig) IsRetryEnabled() bool             { return c.retryEnabled }
-func (c *TelemetryConfig) MaxRetries() int                  { return c.maxRetries }
-func (c *TelemetryConfig) RetryBackoff() time.Duration      { return c.retryBackoff }
-func (c *TelemetryConfig) IsCompressionEnabled() bool       { return c.compressionGzip }
-func (c *TelemetryConfig) ServiceName() string              { return c.serviceName }
-func (c *TelemetryConfig) ServiceVersion() string           { return c.serviceVersion }
-func (c *TelemetryConfig) Environment() string              { return c.environment }
+func (c *TelemetryConfig) Credentials() *Credentials           { return c.credentials }
+func (c *TelemetryConfig) Endpoint() string                    { return c.endpoint }
+func (c *TelemetryConfig) Protocol() Protocol                  { return c.protocol }
+func (c *TelemetryConfig) IsInsecure() bool                    { return c.insecure }
+func (c *TelemetryConfig) Timeout() time.Duration              { return c.timeout }
+func (c *TelemetryConfig) IsRetryEnabled() bool                { return c.retryEnabled }
+func (c *TelemetryConfig) MaxRetries() int                     { return c.maxRetries }
+func (c *TelemetryConfig) RetryBackoff() time.Duration         { return c.retryBackoff }
+func (c *TelemetryConfig) IsCompressionEnabled() bool          { return c.compressionGzip }
+func (c *TelemetryConfig) ServiceName() string                 { return c.serviceName }
+func (c *TelemetryConfig) ServiceVersion() string              { return c.serviceVersion }
+func (c *TelemetryConfig) Environment() string                 { return c.environment }
 func (c *TelemetryConfig) CustomAttributes() map[string]string { return c.customAttributes }
-func (c *TelemetryConfig) BatchTimeout() time.Duration      { return c.batchTimeout }
-func (c *TelemetryConfig) BatchMaxSize() int                { return c.batchMaxSize }
-func (c *TelemetryConfig) RateLimit() int                   { return c.rateLimit }
+func (c *TelemetryConfig) BatchTimeout() time.Duration         { return c.batchTimeout }
+func (c *TelemetryConfig) BatchMaxSize() int                   { return c.batchMaxSize }
+func (c *TelemetryConfig) RateLimit() int                      { return c.rateLimit }
 
 // IsSignalEnabled checks if a signal type is enabled
 func (c *TelemetryConfig) IsSignalEnabled(signal SignalType) bool {

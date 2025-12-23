@@ -14,15 +14,22 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Test template functions used by generators
+
+// titleCase returns a title cased string using golang.org/x/text/cases
+func titleCase(s string) string {
+	return cases.Title(language.English).String(s)
+}
 
 func TestTemplateFunctions(t *testing.T) {
 	funcMap := template.FuncMap{
 		"lower":      strings.ToLower,
 		"upper":      strings.ToUpper,
-		"title":      strings.Title,
+		"title":      titleCase,
 		"pascal":     toPascalCase,
 		"camel":      toCamelCase,
 		"snake":      toSnakeCase,
@@ -291,11 +298,12 @@ func TestTemplateFileOperations(t *testing.T) {
 // Helper functions (same as in main.go)
 
 func toPascalCase(s string) string {
+	caser := cases.Title(language.English)
 	words := strings.FieldsFunc(s, func(r rune) bool {
 		return r == '_' || r == '-' || r == ' '
 	})
 	for i, word := range words {
-		words[i] = strings.Title(strings.ToLower(word))
+		words[i] = caser.String(strings.ToLower(word))
 	}
 	return strings.Join(words, "")
 }

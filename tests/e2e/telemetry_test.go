@@ -243,8 +243,8 @@ func TestE2E_LongRunningSession(t *testing.T) {
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
 		defer func() {
-			client.Flush(ctx)
-			client.Shutdown(ctx)
+			_ = client.Flush(ctx)
+			_ = client.Shutdown(ctx)
 		}()
 
 		// Send telemetry every second for 30 seconds
@@ -284,8 +284,8 @@ func TestE2E_ErrorRecovery(t *testing.T) {
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
 		defer func() {
-			client.Flush(ctx)
-			client.Shutdown(ctx)
+			_ = client.Flush(ctx)
+			_ = client.Shutdown(ctx)
 		}()
 
 		// Send some valid telemetry
@@ -391,8 +391,8 @@ func TestE2E_MultipleServices(t *testing.T) {
 
 		// Shutdown all clients
 		for _, client := range clients {
-			client.Flush(ctx)
-			client.Shutdown(ctx)
+			_ = client.Flush(ctx)
+			_ = client.Shutdown(ctx)
 		}
 	})
 }
@@ -413,8 +413,8 @@ func BenchmarkE2E_MetricThroughput(b *testing.B) {
 		b.Fatalf("Failed to initialize: %v", err)
 	}
 	defer func() {
-		client.Flush(ctx)
-		client.Shutdown(ctx)
+		_ = client.Flush(ctx)
+		_ = client.Shutdown(ctx)
 	}()
 
 	b.ResetTimer()
@@ -438,8 +438,8 @@ func BenchmarkE2E_LogThroughput(b *testing.B) {
 		b.Fatalf("Failed to initialize: %v", err)
 	}
 	defer func() {
-		client.Flush(ctx)
-		client.Shutdown(ctx)
+		_ = client.Flush(ctx)
+		_ = client.Shutdown(ctx)
 	}()
 
 	b.ResetTimer()
