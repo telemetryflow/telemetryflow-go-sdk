@@ -263,7 +263,11 @@ func executeTemplate(templateName string, data interface{}, outputPath string) e
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", outputPath, err)
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", outputPath, err)
+		}
+	}()
 
 	if err := tmpl.Execute(f, data); err != nil {
 		return fmt.Errorf("failed to execute template %s: %w", templateName, err)

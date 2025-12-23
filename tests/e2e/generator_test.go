@@ -46,7 +46,11 @@ func TestE2EGeneratorFullWorkflow(t *testing.T) {
 		// Create temporary project directory
 		tmpDir, err := os.MkdirTemp("", "e2e-telemetryflow-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		// Step 1: Initialize TelemetryFlow integration
 		cmd := exec.Command(generatorBinary, "--no-banner", "init",
@@ -114,7 +118,11 @@ func TestE2ERESTAPIGeneratorFullWorkflow(t *testing.T) {
 		// Create temporary project directory
 		tmpDir, err := os.MkdirTemp("", "e2e-restapi-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		projectName := "e2e-api"
 		modulePath := "github.com/e2e/api"
@@ -303,7 +311,11 @@ func TestE2EGeneratorWithDisabledFeatures(t *testing.T) {
 	t.Run("create project with disabled features", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "e2e-disabled-features-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "new",
 			"--name", "minimal-api",
@@ -345,7 +357,11 @@ func TestE2EMultipleProjects(t *testing.T) {
 	t.Run("create multiple independent projects", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "e2e-multi-project-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		projects := []struct {
 			name   string

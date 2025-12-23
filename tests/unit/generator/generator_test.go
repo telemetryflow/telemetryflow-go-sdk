@@ -120,7 +120,11 @@ func TestDirectoryCreation(t *testing.T) {
 		// Create temp directory
 		tmpDir, err := os.MkdirTemp("", "telemetryflow-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		// Define directories to create
 		dirs := []string{
@@ -147,7 +151,11 @@ func TestDirectoryCreation(t *testing.T) {
 	t.Run("should handle existing directories", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "telemetryflow-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		dir := filepath.Join(tmpDir, "telemetry")
 
@@ -165,7 +173,11 @@ func TestFileGeneration(t *testing.T) {
 	t.Run("should generate file from template", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "telemetryflow-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		tmplStr := `// Package {{.ProjectName}}
 package main
@@ -189,7 +201,9 @@ func main() {
 		}
 
 		err = tmpl.Execute(f, data)
-		f.Close()
+		if err := f.Close(); err != nil {
+			t.Errorf("Failed to close file: %v", err)
+		}
 		require.NoError(t, err)
 
 		// Read and verify content

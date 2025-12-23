@@ -71,10 +71,12 @@ func main() {
 	// Start server in goroutine
 	go func() {
 		log.Println("Starting HTTP server on :8080")
-		client.LogInfo(ctx, "HTTP server started", map[string]interface{}{
+		if err := client.LogInfo(ctx, "HTTP server started", map[string]interface{}{
 			"port":    8080,
 			"version": "1.0.0",
-		})
+		}); err != nil {
+			log.Printf("Failed to log info: %v", err)
+		}
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server error: %v", err)
 		}
@@ -86,7 +88,9 @@ func main() {
 	<-quit
 
 	log.Println("Shutting down server...")
-	client.LogInfo(ctx, "Server shutdown initiated", nil)
+	if err := client.LogInfo(ctx, "Server shutdown initiated", nil); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	// Graceful shutdown
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -97,8 +101,12 @@ func main() {
 	}
 
 	// Flush and shutdown telemetry
-	client.Flush(shutdownCtx)
-	client.Shutdown(shutdownCtx)
+	if err := client.Flush(shutdownCtx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
+	if err := client.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Failed to shutdown: %v", err)
+	}
 
 	log.Println("Server stopped")
 }
@@ -131,33 +139,41 @@ func TelemetryMiddleware(next http.Handler) http.Handler {
 		duration := time.Since(start)
 
 		// Record request metrics
-		client.IncrementCounter(ctx, "http.requests.total", 1, map[string]interface{}{
+		if err := client.IncrementCounter(ctx, "http.requests.total", 1, map[string]interface{}{
 			"method": r.Method,
 			"path":   r.URL.Path,
 			"status": wrapped.statusCode,
-		})
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
 
-		client.RecordHistogram(ctx, "http.request.duration", duration.Seconds(), "s", map[string]interface{}{
+		if err := client.RecordHistogram(ctx, "http.request.duration", duration.Seconds(), "s", map[string]interface{}{
 			"method": r.Method,
 			"path":   r.URL.Path,
 			"status": wrapped.statusCode,
-		})
+		}); err != nil {
+			log.Printf("Failed to record histogram: %v", err)
+		}
 
 		// Log errors
 		if wrapped.statusCode >= 400 {
-			client.IncrementCounter(ctx, "http.errors.total", 1, map[string]interface{}{
+			if err := client.IncrementCounter(ctx, "http.errors.total", 1, map[string]interface{}{
 				"method": r.Method,
 				"path":   r.URL.Path,
 				"status": wrapped.statusCode,
-			})
+			}); err != nil {
+				log.Printf("Failed to increment counter: %v", err)
+			}
 
 			if wrapped.statusCode >= 500 {
-				client.LogError(ctx, "HTTP request failed", map[string]interface{}{
+				if err := client.LogError(ctx, "HTTP request failed", map[string]interface{}{
 					"method":      r.Method,
 					"path":        r.URL.Path,
 					"status":      wrapped.statusCode,
 					"duration_ms": duration.Milliseconds(),
-				})
+				}); err != nil {
+					log.Printf("Failed to log error: %v", err)
+				}
 			}
 		}
 
@@ -167,7 +183,9 @@ func TelemetryMiddleware(next http.Handler) http.Handler {
 			if wrapped.statusCode >= 500 {
 				spanErr = fmt.Errorf("HTTP %d", wrapped.statusCode)
 			}
-			client.EndSpan(ctx, spanID, spanErr)
+			if err := client.EndSpan(ctx, spanID, spanErr); err != nil {
+				log.Printf("Failed to end span: %v", err)
+			}
 		}
 	})
 }
@@ -211,10 +229,14 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 
 		time.Sleep(50 * time.Millisecond) // Simulate query time
 
-		client.AddSpanEvent(ctx, spanID, "query.executed", map[string]interface{}{
+		if err := client.AddSpanEvent(ctx, spanID, "query.executed", map[string]interface{}{
 			"rows_returned": 10,
-		})
-		client.EndSpan(ctx, spanID, nil)
+		}); err != nil {
+			log.Printf("Failed to add span event: %v", err)
+		}
+		if err := client.EndSpan(ctx, spanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		users := []map[string]interface{}{
 			{"id": 1, "name": "Alice", "email": "alice@example.com"},
@@ -224,9 +246,11 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, users)
 
 	case http.MethodPost:
-		client.LogInfo(ctx, "Creating new user", map[string]interface{}{
+		if err := client.LogInfo(ctx, "Creating new user", map[string]interface{}{
 			"source": "api",
-		})
+		}); err != nil {
+			log.Printf("Failed to log info: %v", err)
+		}
 		response := map[string]interface{}{
 			"id":      4,
 			"message": "User created successfully",
@@ -256,7 +280,9 @@ func handleOrders(w http.ResponseWriter, r *http.Request) {
 		})
 
 		// Simulate order validation
-		client.AddSpanEvent(ctx, spanID, "order.validated", nil)
+		if err := client.AddSpanEvent(ctx, spanID, "order.validated", nil); err != nil {
+			log.Printf("Failed to add span event: %v", err)
+		}
 		time.Sleep(30 * time.Millisecond)
 
 		// Simulate payment processing
@@ -264,23 +290,33 @@ func handleOrders(w http.ResponseWriter, r *http.Request) {
 			"payment.provider": "stripe",
 		})
 		time.Sleep(100 * time.Millisecond)
-		client.EndSpan(ctx, paymentSpanID, nil)
+		if err := client.EndSpan(ctx, paymentSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
-		client.AddSpanEvent(ctx, spanID, "payment.completed", map[string]interface{}{
+		if err := client.AddSpanEvent(ctx, spanID, "payment.completed", map[string]interface{}{
 			"payment.method": "credit_card",
-		})
+		}); err != nil {
+			log.Printf("Failed to add span event: %v", err)
+		}
 
 		// Record business metric
-		client.IncrementCounter(ctx, "orders.created", 1, map[string]interface{}{
+		if err := client.IncrementCounter(ctx, "orders.created", 1, map[string]interface{}{
 			"source":         "api",
 			"payment_method": "credit_card",
-		})
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
 
-		client.RecordHistogram(ctx, "order.value", 199.99, "usd", map[string]interface{}{
+		if err := client.RecordHistogram(ctx, "order.value", 199.99, "usd", map[string]interface{}{
 			"source": "api",
-		})
+		}); err != nil {
+			log.Printf("Failed to record histogram: %v", err)
+		}
 
-		client.EndSpan(ctx, spanID, nil)
+		if err := client.EndSpan(ctx, spanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		response := map[string]interface{}{
 			"id":      "ord_003",
@@ -297,9 +333,11 @@ func handleOrders(w http.ResponseWriter, r *http.Request) {
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	// Record health check
-	client.RecordGauge(r.Context(), "health.check", 1, map[string]interface{}{
+	if err := client.RecordGauge(r.Context(), "health.check", 1, map[string]interface{}{
 		"endpoint": "/health",
-	})
+	}); err != nil {
+		log.Printf("Failed to record gauge: %v", err)
+	}
 
 	response := map[string]string{
 		"status":  "healthy",
@@ -311,5 +349,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("Failed to encode JSON: %v", err)
+	}
 }

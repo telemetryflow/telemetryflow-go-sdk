@@ -637,7 +637,11 @@ func TestProjectFileGeneration(t *testing.T) {
 	t.Run("should create all project files", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		// Create directory structure
 		dirs := []string{

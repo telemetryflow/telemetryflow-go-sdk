@@ -43,11 +43,19 @@ func TestBuilder_WithAPIKey(t *testing.T) {
 func TestBuilder_WithAPIKeyFromEnv(t *testing.T) {
 	t.Run("should read credentials from environment", func(t *testing.T) {
 		// Set environment variables
-		os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env_test")
-		os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret")
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env_test"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
 		defer func() {
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_ID"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
 		}()
 
 		client, err := telemetryflow.NewBuilder().
@@ -65,8 +73,12 @@ func TestBuilder_WithAPIKeyFromEnv(t *testing.T) {
 
 	t.Run("should error when env vars not set", func(t *testing.T) {
 		// Ensure env vars are not set
-		os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-		os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
+		if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_ID"); err != nil {
+			t.Errorf("Failed to unset env var: %v", err)
+		}
+		if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET"); err != nil {
+			t.Errorf("Failed to unset env var: %v", err)
+		}
 
 		_, err := telemetryflow.NewBuilder().
 			WithAPIKeyFromEnv().
@@ -93,8 +105,14 @@ func TestBuilder_WithEndpoint(t *testing.T) {
 
 func TestBuilder_WithEndpointFromEnv(t *testing.T) {
 	t.Run("should read endpoint from environment", func(t *testing.T) {
-		os.Setenv("TELEMETRYFLOW_ENDPOINT", "env.endpoint.id:4317")
-		defer os.Unsetenv("TELEMETRYFLOW_ENDPOINT")
+		if err := os.Setenv("TELEMETRYFLOW_ENDPOINT", "env.endpoint.id:4317"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		defer func() {
+			if err := os.Unsetenv("TELEMETRYFLOW_ENDPOINT"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+		}()
 
 		client, err := telemetryflow.NewBuilder().
 			WithAPIKey("tfk_test", "tfs_secret").
@@ -107,7 +125,9 @@ func TestBuilder_WithEndpointFromEnv(t *testing.T) {
 	})
 
 	t.Run("should use default when env not set", func(t *testing.T) {
-		os.Unsetenv("TELEMETRYFLOW_ENDPOINT")
+		if err := os.Unsetenv("TELEMETRYFLOW_ENDPOINT"); err != nil {
+			t.Errorf("Failed to unset env var: %v", err)
+		}
 
 		client, err := telemetryflow.NewBuilder().
 			WithAPIKey("tfk_test", "tfs_secret").
@@ -285,19 +305,43 @@ func TestBuilder_WithCustomAttribute(t *testing.T) {
 func TestBuilder_WithAutoConfiguration(t *testing.T) {
 	t.Run("should configure from all environment variables", func(t *testing.T) {
 		// Set all environment variables
-		os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_auto_test")
-		os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_auto_secret")
-		os.Setenv("TELEMETRYFLOW_ENDPOINT", "auto.endpoint.id:4317")
-		os.Setenv("TELEMETRYFLOW_SERVICE_NAME", "auto-service")
-		os.Setenv("TELEMETRYFLOW_SERVICE_VERSION", "3.0.0")
-		os.Setenv("ENV", "production")
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_auto_test"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_auto_secret"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_ENDPOINT", "auto.endpoint.id:4317"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_SERVICE_NAME", "auto-service"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_SERVICE_VERSION", "3.0.0"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("ENV", "production"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
 		defer func() {
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
-			os.Unsetenv("TELEMETRYFLOW_ENDPOINT")
-			os.Unsetenv("TELEMETRYFLOW_SERVICE_NAME")
-			os.Unsetenv("TELEMETRYFLOW_SERVICE_VERSION")
-			os.Unsetenv("ENV")
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_ID"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_ENDPOINT"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_SERVICE_NAME"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_SERVICE_VERSION"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("ENV"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
 		}()
 
 		client, err := telemetryflow.NewBuilder().
@@ -401,13 +445,25 @@ func TestBuilder_MethodChaining(t *testing.T) {
 
 func TestNewFromEnv(t *testing.T) {
 	t.Run("should create client from environment", func(t *testing.T) {
-		os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env_client")
-		os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret")
-		os.Setenv("TELEMETRYFLOW_SERVICE_NAME", "env-service")
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env_client"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
+		if err := os.Setenv("TELEMETRYFLOW_SERVICE_NAME", "env-service"); err != nil {
+			t.Errorf("Failed to set env var: %v", err)
+		}
 		defer func() {
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-			os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
-			os.Unsetenv("TELEMETRYFLOW_SERVICE_NAME")
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_ID"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
+			if err := os.Unsetenv("TELEMETRYFLOW_SERVICE_NAME"); err != nil {
+				t.Errorf("Failed to unset env var: %v", err)
+			}
 		}()
 
 		client, err := telemetryflow.NewFromEnv()

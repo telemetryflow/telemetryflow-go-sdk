@@ -461,7 +461,11 @@ func generateFromTemplate(templateName string, data interface{}, outputPath stri
 		fmt.Fprintf(os.Stderr, "Failed to create file %s: %v\n", outputPath, err)
 		return
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close file %s: %v\n", outputPath, err)
+		}
+	}()
 
 	if err := tmpl.Execute(f, data); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute template %s: %v\n", templateName, err)

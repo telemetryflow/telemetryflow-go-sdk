@@ -70,10 +70,12 @@ func main() {
 		log.Fatalf("Failed to initialize TelemetryFlow: %v", err)
 	}
 
-	client.LogInfo(ctx, "Worker pool starting", map[string]interface{}{
+	if err := client.LogInfo(ctx, "Worker pool starting", map[string]interface{}{
 		"pool_size": 3,
 		"version":   "1.0.0",
-	})
+	}); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	// Create job queue
 	jobs := make(chan Job, 100)
@@ -99,7 +101,9 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutdown signal received, stopping workers...")
-	client.LogInfo(ctx, "Worker pool shutdown initiated", nil)
+	if err := client.LogInfo(ctx, "Worker pool shutdown initiated", nil); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	// Signal shutdown
 	close(quit)
@@ -120,15 +124,21 @@ func main() {
 	}
 
 	// Report final queue stats
-	client.RecordGauge(ctx, "worker.queue.pending", float64(len(jobs)), map[string]interface{}{
+	if err := client.RecordGauge(ctx, "worker.queue.pending", float64(len(jobs)), map[string]interface{}{
 		"status": "shutdown",
-	})
+	}); err != nil {
+		log.Printf("Failed to record gauge: %v", err)
+	}
 
 	// Flush and shutdown telemetry
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client.Flush(shutdownCtx)
-	client.Shutdown(shutdownCtx)
+	if err := client.Flush(shutdownCtx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
+	if err := client.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Failed to shutdown: %v", err)
+	}
 
 	log.Println("Worker pool stopped")
 }
@@ -148,17 +158,21 @@ func NewWorker(id string, jobs chan Job, quit chan struct{}, wg *sync.WaitGroup,
 // Start begins processing jobs
 func (w *Worker) Start() {
 	log.Printf("[%s] Starting worker", w.id)
-	w.client.LogInfo(w.ctx, "Worker started", map[string]interface{}{
+	if err := w.client.LogInfo(w.ctx, "Worker started", map[string]interface{}{
 		"worker_id": w.id,
-	})
+	}); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	for {
 		select {
 		case <-w.quit:
 			log.Printf("[%s] Worker stopping", w.id)
-			w.client.LogInfo(w.ctx, "Worker stopped", map[string]interface{}{
+			if err := w.client.LogInfo(w.ctx, "Worker stopped", map[string]interface{}{
 				"worker_id": w.id,
-			})
+			}); err != nil {
+				log.Printf("Failed to log info: %v", err)
+			}
 			return
 
 		case job := <-w.jobs:
@@ -188,16 +202,20 @@ func (w *Worker) processJob(job Job) {
 	log.Printf("[%s] Processing job %s (type: %s)", w.id, job.ID, job.Type)
 
 	// Record job picked up
-	w.client.IncrementCounter(ctx, "worker.jobs.picked_up", 1, map[string]interface{}{
+	if err := w.client.IncrementCounter(ctx, "worker.jobs.picked_up", 1, map[string]interface{}{
 		"job_type":  job.Type,
 		"worker_id": w.id,
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
 	// Record queue wait time
 	waitTime := time.Since(job.CreatedAt)
-	w.client.RecordHistogram(ctx, "worker.job.queue_time", waitTime.Seconds(), "s", map[string]interface{}{
+	if err := w.client.RecordHistogram(ctx, "worker.job.queue_time", waitTime.Seconds(), "s", map[string]interface{}{
 		"job_type": job.Type,
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
 	// Process based on job type
 	var processErr error
@@ -218,34 +236,44 @@ func (w *Worker) processJob(job Job) {
 	status := "success"
 	if processErr != nil {
 		status = "failed"
-		w.client.IncrementCounter(ctx, "worker.jobs.failed", 1, map[string]interface{}{
+		if err := w.client.IncrementCounter(ctx, "worker.jobs.failed", 1, map[string]interface{}{
 			"job_type":  job.Type,
 			"worker_id": w.id,
 			"error":     processErr.Error(),
-		})
-		w.client.LogError(ctx, "Job processing failed", map[string]interface{}{
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
+		if err := w.client.LogError(ctx, "Job processing failed", map[string]interface{}{
 			"job_id":      job.ID,
 			"job_type":    job.Type,
 			"worker_id":   w.id,
 			"error":       processErr.Error(),
 			"duration_ms": duration.Milliseconds(),
-		})
+		}); err != nil {
+			log.Printf("Failed to log error: %v", err)
+		}
 	} else {
-		w.client.IncrementCounter(ctx, "worker.jobs.completed", 1, map[string]interface{}{
+		if err := w.client.IncrementCounter(ctx, "worker.jobs.completed", 1, map[string]interface{}{
 			"job_type":  job.Type,
 			"worker_id": w.id,
-		})
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
 	}
 
-	w.client.RecordHistogram(ctx, "worker.job.duration", duration.Seconds(), "s", map[string]interface{}{
+	if err := w.client.RecordHistogram(ctx, "worker.job.duration", duration.Seconds(), "s", map[string]interface{}{
 		"job_type":  job.Type,
 		"worker_id": w.id,
 		"status":    status,
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
 	// End span
 	if spanID != "" {
-		w.client.EndSpan(ctx, spanID, processErr)
+		if err := w.client.EndSpan(ctx, spanID, processErr); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 	}
 
 	log.Printf("[%s] Completed job %s in %v (status: %s)", w.id, job.ID, duration, status)
@@ -264,19 +292,27 @@ func (w *Worker) processEmailJob(ctx context.Context, job Job, parentSpanID stri
 	// Simulate occasional failures
 	if rand.Float32() < 0.1 {
 		err := fmt.Errorf("SMTP connection timeout")
-		w.client.EndSpan(ctx, spanID, err)
+		if err := w.client.EndSpan(ctx, spanID, err); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 		return err
 	}
 
-	w.client.AddSpanEvent(ctx, spanID, "email.sent", map[string]interface{}{
+	if err := w.client.AddSpanEvent(ctx, spanID, "email.sent", map[string]interface{}{
 		"provider": "sendgrid",
-	})
+	}); err != nil {
+		log.Printf("Failed to add span event: %v", err)
+	}
 
-	w.client.IncrementCounter(ctx, "emails.sent", 1, map[string]interface{}{
+	if err := w.client.IncrementCounter(ctx, "emails.sent", 1, map[string]interface{}{
 		"provider": "sendgrid",
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
-	w.client.EndSpan(ctx, spanID, nil)
+	if err := w.client.EndSpan(ctx, spanID, nil); err != nil {
+		log.Printf("Failed to end span: %v", err)
+	}
 	return nil
 }
 
@@ -290,13 +326,19 @@ func (w *Worker) processNotificationJob(ctx context.Context, job Job, parentSpan
 	// Simulate push notification
 	time.Sleep(time.Duration(50+rand.Intn(100)) * time.Millisecond)
 
-	w.client.AddSpanEvent(ctx, spanID, "notification.delivered", nil)
+	if err := w.client.AddSpanEvent(ctx, spanID, "notification.delivered", nil); err != nil {
+		log.Printf("Failed to add span event: %v", err)
+	}
 
-	w.client.IncrementCounter(ctx, "notifications.sent", 1, map[string]interface{}{
+	if err := w.client.IncrementCounter(ctx, "notifications.sent", 1, map[string]interface{}{
 		"type": job.Payload["type"],
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
-	w.client.EndSpan(ctx, spanID, nil)
+	if err := w.client.EndSpan(ctx, spanID, nil); err != nil {
+		log.Printf("Failed to end span: %v", err)
+	}
 	return nil
 }
 
@@ -310,22 +352,30 @@ func (w *Worker) processReportJob(ctx context.Context, job Job, parentSpanID str
 	// Simulate report generation (longer task)
 	steps := []string{"fetch_data", "process_data", "generate_charts", "compile_pdf"}
 	for _, step := range steps {
-		w.client.AddSpanEvent(ctx, spanID, fmt.Sprintf("report.%s", step), nil)
+		if err := w.client.AddSpanEvent(ctx, spanID, fmt.Sprintf("report.%s", step), nil); err != nil {
+			log.Printf("Failed to add span event: %v", err)
+		}
 		time.Sleep(time.Duration(100+rand.Intn(150)) * time.Millisecond)
 	}
 
 	// Record report size
 	reportSize := float64(rand.Intn(5000) + 1000) // KB
-	w.client.RecordHistogram(ctx, "report.size", reportSize, "KB", map[string]interface{}{
+	if err := w.client.RecordHistogram(ctx, "report.size", reportSize, "KB", map[string]interface{}{
 		"report_type": job.Payload["report_type"],
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
-	w.client.IncrementCounter(ctx, "reports.generated", 1, map[string]interface{}{
+	if err := w.client.IncrementCounter(ctx, "reports.generated", 1, map[string]interface{}{
 		"report_type": job.Payload["report_type"],
 		"format":      job.Payload["format"],
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
-	w.client.EndSpan(ctx, spanID, nil)
+	if err := w.client.EndSpan(ctx, spanID, nil); err != nil {
+		log.Printf("Failed to end span: %v", err)
+	}
 	return nil
 }
 
@@ -355,19 +405,25 @@ func produceJobs(ctx context.Context, jobs chan Job, quit chan struct{}) {
 
 			select {
 			case jobs <- job:
-				client.IncrementCounter(ctx, "worker.jobs.queued", 1, map[string]interface{}{
+				if err := client.IncrementCounter(ctx, "worker.jobs.queued", 1, map[string]interface{}{
 					"job_type": jobType,
-				})
+				}); err != nil {
+					log.Printf("Failed to increment counter: %v", err)
+				}
 			default:
 				// Queue full, log and drop
-				client.LogWarn(ctx, "Job queue full, job dropped", map[string]interface{}{
+				if err := client.LogWarn(ctx, "Job queue full, job dropped", map[string]interface{}{
 					"job_id":   job.ID,
 					"job_type": jobType,
-				})
-				client.IncrementCounter(ctx, "worker.jobs.dropped", 1, map[string]interface{}{
+				}); err != nil {
+					log.Printf("Failed to log warning: %v", err)
+				}
+				if err := client.IncrementCounter(ctx, "worker.jobs.dropped", 1, map[string]interface{}{
 					"job_type": jobType,
 					"reason":   "queue_full",
-				})
+				}); err != nil {
+					log.Printf("Failed to increment counter: %v", err)
+				}
 			}
 		}
 	}
@@ -412,21 +468,27 @@ func reportMetrics(ctx context.Context, jobs chan Job, quit chan struct{}) {
 			queueLen := len(jobs)
 			queueCap := cap(jobs)
 
-			client.RecordGauge(ctx, "worker.queue.pending", float64(queueLen), map[string]interface{}{
+			if err := client.RecordGauge(ctx, "worker.queue.pending", float64(queueLen), map[string]interface{}{
 				"capacity": queueCap,
-			})
+			}); err != nil {
+				log.Printf("Failed to record gauge: %v", err)
+			}
 
-			client.RecordGauge(ctx, "worker.queue.utilization", float64(queueLen)/float64(queueCap)*100, map[string]interface{}{
+			if err := client.RecordGauge(ctx, "worker.queue.utilization", float64(queueLen)/float64(queueCap)*100, map[string]interface{}{
 				"unit": "percent",
-			})
+			}); err != nil {
+				log.Printf("Failed to record gauge: %v", err)
+			}
 
 			// Log if queue is getting full
 			if float64(queueLen)/float64(queueCap) > 0.8 {
-				client.LogWarn(ctx, "Job queue utilization high", map[string]interface{}{
+				if err := client.LogWarn(ctx, "Job queue utilization high", map[string]interface{}{
 					"pending":     queueLen,
 					"capacity":    queueCap,
 					"utilization": fmt.Sprintf("%.1f%%", float64(queueLen)/float64(queueCap)*100),
-				})
+				}); err != nil {
+					log.Printf("Failed to log warning: %v", err)
+				}
 			}
 		}
 	}

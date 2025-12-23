@@ -86,7 +86,7 @@ func TestClientLifecycle(t *testing.T) {
 			assert.Contains(t, err2.Error(), "already initialized")
 
 			// Cleanup
-			client.Shutdown(ctx)
+			_ = client.Shutdown(ctx)
 		}
 	})
 }
@@ -138,7 +138,7 @@ func TestClientMetricsIntegration(t *testing.T) {
 		ctx := context.Background()
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
-		defer client.Shutdown(ctx)
+		defer func() { _ = client.Shutdown(ctx) }()
 
 		// Send various metrics
 		err = client.IncrementCounter(ctx, "integration.counter", 1, map[string]interface{}{
@@ -180,7 +180,7 @@ func TestClientLogsIntegration(t *testing.T) {
 		ctx := context.Background()
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
-		defer client.Shutdown(ctx)
+		defer func() { _ = client.Shutdown(ctx) }()
 
 		// Send logs at different levels
 		err = client.LogInfo(ctx, "Integration test info log", map[string]interface{}{
@@ -224,7 +224,7 @@ func TestClientTracesIntegration(t *testing.T) {
 		ctx := context.Background()
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
-		defer client.Shutdown(ctx)
+		defer func() { _ = client.Shutdown(ctx) }()
 
 		// Create a span
 		spanID, err := client.StartSpan(ctx, "integration.test.span", "internal", map[string]interface{}{
@@ -257,7 +257,7 @@ func TestClientTracesIntegration(t *testing.T) {
 		ctx := context.Background()
 		err = client.Initialize(ctx)
 		require.NoError(t, err)
-		defer client.Shutdown(ctx)
+		defer func() { _ = client.Shutdown(ctx) }()
 
 		spanID, err := client.StartSpan(ctx, "integration.error.span", "internal", nil)
 		assert.NoError(t, err)

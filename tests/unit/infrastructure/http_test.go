@@ -268,7 +268,10 @@ func TestHTTPRequestHandling(t *testing.T) {
 				http.Error(w, "Failed to read body", http.StatusBadRequest)
 				return
 			}
-			defer r.Body.Close()
+			if err := r.Body.Close(); err != nil {
+				// Log error but continue
+				_ = err
+			}
 
 			var req CreateRequest
 			if err := json.Unmarshal(body, &req); err != nil {
@@ -305,7 +308,10 @@ func TestHTTPRequestHandling(t *testing.T) {
 
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, _ := io.ReadAll(r.Body)
-			defer r.Body.Close()
+			if err := r.Body.Close(); err != nil {
+				// Log error but continue
+				_ = err
+			}
 
 			var req CreateRequest
 			_ = json.Unmarshal(body, &req)

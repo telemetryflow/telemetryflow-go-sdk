@@ -84,10 +84,12 @@ func main() {
 		log.Fatalf("Failed to initialize TelemetryFlow: %v", err)
 	}
 
-	client.LogInfo(ctx, "gRPC server starting", map[string]interface{}{
+	if err := client.LogInfo(ctx, "gRPC server starting", map[string]interface{}{
 		"port":    50051,
 		"version": "1.0.0",
-	})
+	}); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	// Create services
 	userService := &UserService{client: client}
@@ -119,7 +121,9 @@ func main() {
 	<-sigChan
 
 	log.Println("Shutdown signal received...")
-	client.LogInfo(ctx, "gRPC server shutdown initiated", nil)
+	if err := client.LogInfo(ctx, "gRPC server shutdown initiated", nil); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
 	close(quit)
 	wg.Wait()
@@ -127,8 +131,12 @@ func main() {
 	// Flush and shutdown telemetry
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client.Flush(shutdownCtx)
-	client.Shutdown(shutdownCtx)
+	if err := client.Flush(shutdownCtx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
+	if err := client.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Failed to shutdown: %v", err)
+	}
 
 	log.Println("gRPC server stopped")
 }
@@ -149,10 +157,12 @@ func UnaryServerInterceptor(ctx context.Context, info *UnaryServerInfo, handler 
 	}
 
 	// Record RPC started
-	client.IncrementCounter(ctx, "grpc.server.started", 1, map[string]interface{}{
+	if err := client.IncrementCounter(ctx, "grpc.server.started", 1, map[string]interface{}{
 		"grpc.service": info.Service,
 		"grpc.method":  info.Method,
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
 	// Call handler
 	resp, handlerErr := handler(ctx)
@@ -171,32 +181,40 @@ func UnaryServerInterceptor(ctx context.Context, info *UnaryServerInfo, handler 
 	}
 
 	// Record metrics
-	client.RecordHistogram(ctx, "grpc.server.duration", duration.Seconds(), "s", map[string]interface{}{
+	if err := client.RecordHistogram(ctx, "grpc.server.duration", duration.Seconds(), "s", map[string]interface{}{
 		"grpc.service":     info.Service,
 		"grpc.method":      info.Method,
 		"grpc.status_code": statusCode,
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
-	client.IncrementCounter(ctx, "grpc.server.handled", 1, map[string]interface{}{
+	if err := client.IncrementCounter(ctx, "grpc.server.handled", 1, map[string]interface{}{
 		"grpc.service":     info.Service,
 		"grpc.method":      info.Method,
 		"grpc.status_code": statusCode,
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
 	// Log errors
 	if handlerErr != nil {
-		client.LogError(ctx, "gRPC call failed", map[string]interface{}{
+		if err := client.LogError(ctx, "gRPC call failed", map[string]interface{}{
 			"grpc.service":     info.Service,
 			"grpc.method":      info.Method,
 			"grpc.status_code": statusCode,
 			"error":            handlerErr.Error(),
 			"duration_ms":      duration.Milliseconds(),
-		})
+		}); err != nil {
+			log.Printf("Failed to log error: %v", err)
+		}
 	}
 
 	// End span
 	if spanID != "" {
-		client.EndSpan(ctx, spanID, handlerErr)
+		if err := client.EndSpan(ctx, spanID, handlerErr); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 	}
 
 	return resp, handlerErr
@@ -221,25 +239,31 @@ func StreamServerInterceptor(ctx context.Context, info *StreamServerInfo, handle
 		"grpc.stream_type": streamType,
 	})
 
-	client.IncrementCounter(ctx, "grpc.server.stream.started", 1, map[string]interface{}{
+	if err := client.IncrementCounter(ctx, "grpc.server.stream.started", 1, map[string]interface{}{
 		"grpc.service":     info.Service,
 		"grpc.method":      info.Method,
 		"grpc.stream_type": streamType,
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
 	// Call handler
 	handlerErr := handler(ctx)
 
 	duration := time.Since(start)
 
-	client.RecordHistogram(ctx, "grpc.server.stream.duration", duration.Seconds(), "s", map[string]interface{}{
+	if err := client.RecordHistogram(ctx, "grpc.server.stream.duration", duration.Seconds(), "s", map[string]interface{}{
 		"grpc.service":     info.Service,
 		"grpc.method":      info.Method,
 		"grpc.stream_type": streamType,
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
 	if spanID != "" {
-		client.EndSpan(ctx, spanID, handlerErr)
+		if err := client.EndSpan(ctx, spanID, handlerErr); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 	}
 
 	return handlerErr
@@ -265,7 +289,9 @@ func (s *UserService) GetUser(ctx context.Context, userID string) (map[string]in
 		// Simulate database query
 		time.Sleep(time.Duration(20+rand.Intn(30)) * time.Millisecond)
 
-		client.EndSpan(ctx, dbSpanID, nil)
+		if err := client.EndSpan(ctx, dbSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Simulate not found
 		if rand.Float32() < 0.1 {
@@ -306,12 +332,16 @@ func (s *UserService) CreateUser(ctx context.Context, user map[string]interface{
 		})
 
 		time.Sleep(time.Duration(30+rand.Intn(50)) * time.Millisecond)
-		client.EndSpan(ctx, dbSpanID, nil)
+		if err := client.EndSpan(ctx, dbSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Record business metric
-		client.IncrementCounter(ctx, "users.created", 1, map[string]interface{}{
+		if err := client.IncrementCounter(ctx, "users.created", 1, map[string]interface{}{
 			"source": "grpc",
-		})
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
 
 		return map[string]interface{}{
 			"id":      fmt.Sprintf("user_%d", rand.Intn(10000)),
@@ -341,10 +371,12 @@ func (s *UserService) ListUsers(ctx context.Context, pageSize int) error {
 			// Simulate sending each user
 			time.Sleep(time.Duration(10+rand.Intn(20)) * time.Millisecond)
 
-			client.IncrementCounter(ctx, "grpc.server.stream.msg_sent", 1, map[string]interface{}{
+			if err := client.IncrementCounter(ctx, "grpc.server.stream.msg_sent", 1, map[string]interface{}{
 				"grpc.service": "user.UserService",
 				"grpc.method":  "ListUsers",
-			})
+			}); err != nil {
+				log.Printf("Failed to increment counter: %v", err)
+			}
 		}
 		return nil
 	})
@@ -368,7 +400,9 @@ func (s *OrderService) GetOrder(ctx context.Context, orderID string) (map[string
 		})
 
 		time.Sleep(time.Duration(25+rand.Intn(35)) * time.Millisecond)
-		client.EndSpan(ctx, dbSpanID, nil)
+		if err := client.EndSpan(ctx, dbSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		return map[string]interface{}{
 			"id":     orderID,
@@ -395,7 +429,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, order map[string]interfa
 		// Validate order
 		spanID, _ := client.StartSpan(ctx, "order.validate", "internal", nil)
 		time.Sleep(10 * time.Millisecond)
-		client.EndSpan(ctx, spanID, nil)
+		if err := client.EndSpan(ctx, spanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Check inventory (external call)
 		invSpanID, _ := client.StartSpan(ctx, "inventory.check", "client", map[string]interface{}{
@@ -403,7 +439,9 @@ func (s *OrderService) CreateOrder(ctx context.Context, order map[string]interfa
 			"rpc.service": "inventory.InventoryService",
 		})
 		time.Sleep(time.Duration(30+rand.Intn(40)) * time.Millisecond)
-		client.EndSpan(ctx, invSpanID, nil)
+		if err := client.EndSpan(ctx, invSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Process payment (external call)
 		paySpanID, _ := client.StartSpan(ctx, "payment.process", "client", map[string]interface{}{
@@ -414,10 +452,14 @@ func (s *OrderService) CreateOrder(ctx context.Context, order map[string]interfa
 		// Simulate occasional payment failures
 		if rand.Float32() < 0.05 {
 			err := fmt.Errorf("payment declined")
-			client.EndSpan(ctx, paySpanID, err)
+			if err := client.EndSpan(ctx, paySpanID, err); err != nil {
+				log.Printf("Failed to end span: %v", err)
+			}
 			return nil, err
 		}
-		client.EndSpan(ctx, paySpanID, nil)
+		if err := client.EndSpan(ctx, paySpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Save order
 		dbSpanID, _ := client.StartSpan(ctx, "db.insert.order", "client", map[string]interface{}{
@@ -426,14 +468,20 @@ func (s *OrderService) CreateOrder(ctx context.Context, order map[string]interfa
 			"db.table":     "orders",
 		})
 		time.Sleep(time.Duration(20+rand.Intn(30)) * time.Millisecond)
-		client.EndSpan(ctx, dbSpanID, nil)
+		if err := client.EndSpan(ctx, dbSpanID, nil); err != nil {
+			log.Printf("Failed to end span: %v", err)
+		}
 
 		// Record business metrics
 		total := order["total"].(float64)
-		client.IncrementCounter(ctx, "orders.created", 1, map[string]interface{}{
+		if err := client.IncrementCounter(ctx, "orders.created", 1, map[string]interface{}{
 			"source": "grpc",
-		})
-		client.RecordHistogram(ctx, "order.value", total, "usd", nil)
+		}); err != nil {
+			log.Printf("Failed to increment counter: %v", err)
+		}
+		if err := client.RecordHistogram(ctx, "order.value", total, "usd", nil); err != nil {
+			log.Printf("Failed to record histogram: %v", err)
+		}
 
 		return map[string]interface{}{
 			"id":      fmt.Sprintf("ord_%d", rand.Intn(100000)),
@@ -462,21 +510,31 @@ func simulateGRPCRequests(ctx context.Context, userSvc *UserService, orderSvc *O
 			// Randomly call different services
 			switch rand.Intn(5) {
 			case 0:
-				userSvc.GetUser(ctx, fmt.Sprintf("user_%d", rand.Intn(1000)))
+				if _, err := userSvc.GetUser(ctx, fmt.Sprintf("user_%d", rand.Intn(1000))); err != nil {
+					log.Printf("GetUser failed: %v", err)
+				}
 			case 1:
-				userSvc.CreateUser(ctx, map[string]interface{}{
+				if _, err := userSvc.CreateUser(ctx, map[string]interface{}{
 					"name":  "New User",
 					"email": fmt.Sprintf("user%d@example.com", rand.Intn(10000)),
-				})
+				}); err != nil {
+					log.Printf("CreateUser failed: %v", err)
+				}
 			case 2:
-				userSvc.ListUsers(ctx, 5+rand.Intn(10))
+				if err := userSvc.ListUsers(ctx, 5+rand.Intn(10)); err != nil {
+					log.Printf("ListUsers failed: %v", err)
+				}
 			case 3:
-				orderSvc.GetOrder(ctx, fmt.Sprintf("ord_%d", rand.Intn(10000)))
+				if _, err := orderSvc.GetOrder(ctx, fmt.Sprintf("ord_%d", rand.Intn(10000))); err != nil {
+					log.Printf("GetOrder failed: %v", err)
+				}
 			case 4:
-				orderSvc.CreateOrder(ctx, map[string]interface{}{
+				if _, err := orderSvc.CreateOrder(ctx, map[string]interface{}{
 					"total": float64(rand.Intn(500) + 50),
 					"items": rand.Intn(5) + 1,
-				})
+				}); err != nil {
+					log.Printf("CreateOrder failed: %v", err)
+				}
 			}
 		}
 	}
@@ -493,22 +551,28 @@ func reportGRPCHealth(ctx context.Context, quit chan struct{}) {
 			return
 		case <-ticker.C:
 			// Record server health metrics
-			client.RecordGauge(ctx, "grpc.server.connections", float64(rand.Intn(50)+10), map[string]interface{}{
+			if err := client.RecordGauge(ctx, "grpc.server.connections", float64(rand.Intn(50)+10), map[string]interface{}{
 				"state": "active",
-			})
+			}); err != nil {
+				log.Printf("Failed to record gauge: %v", err)
+			}
 
 			// Simulate memory usage
 			memUsage := float64(rand.Intn(100) + 200)
-			client.RecordGauge(ctx, "grpc.server.memory", memUsage, map[string]interface{}{
+			if err := client.RecordGauge(ctx, "grpc.server.memory", memUsage, map[string]interface{}{
 				"unit": "MB",
-			})
+			}); err != nil {
+				log.Printf("Failed to record gauge: %v", err)
+			}
 
 			// Log health status
-			client.LogInfo(ctx, "gRPC server health check", map[string]interface{}{
+			if err := client.LogInfo(ctx, "gRPC server health check", map[string]interface{}{
 				"status":      "healthy",
 				"memory_mb":   memUsage,
 				"connections": rand.Intn(50) + 10,
-			})
+			}); err != nil {
+				log.Printf("Failed to log info: %v", err)
+			}
 		}
 	}
 }

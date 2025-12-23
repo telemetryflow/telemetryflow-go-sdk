@@ -76,9 +76,9 @@ help:
 	@echo ""
 	@echo "$(YELLOW)Testing Commands:$(NC)"
 	@echo "  make test             - Run unit and integration tests"
-	@echo "  make test-unit        - Run unit tests only"
-	@echo "  make test-integration - Run integration tests only"
 	@echo "  make test-e2e         - Run E2E tests only"
+	@echo "  make test-integration - Run integration tests only"
+	@echo "  make test-unit        - Run unit tests only"
 	@echo "  make test-all         - Run all tests"
 	@echo "  make test-coverage    - Run tests with coverage report"
 	@echo "  make test-short       - Run short tests"
@@ -331,6 +331,11 @@ docker-build:
 	@echo "$(GREEN)Building Docker image...$(NC)"
 	@docker build -t telemetryflow-go-sdk:latest .
 	@echo "$(GREEN)Docker image built$(NC)"
+
+docker-push: docker-build
+	@echo "$(GREEN)Pushing Docker image...$(NC)"
+	@docker push telemetryflow/telemetryflow-go-sdk:$(VERSION)
+	@docker push telemetryflow/telemetryflow-go-sdk:latest
 
 ## Version info
 version:

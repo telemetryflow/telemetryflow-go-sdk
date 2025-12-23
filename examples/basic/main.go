@@ -35,7 +35,11 @@ func simpleExample() {
 	if err := client.Initialize(ctx); err != nil {
 		log.Fatalf("Failed to initialize: %v", err)
 	}
-	defer client.Shutdown(ctx)
+	defer func() {
+		if err := client.Shutdown(ctx); err != nil {
+			log.Printf("Failed to shutdown client: %v", err)
+		}
+	}()
 
 	// Send a simple metric
 	if err := client.IncrementCounter(ctx, "requests.total", 1, map[string]interface{}{
@@ -46,7 +50,9 @@ func simpleExample() {
 	}
 
 	// Flush and wait
-	client.Flush(ctx)
+	if err := client.Flush(ctx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
 	log.Println("Simple example completed")
 }
 
@@ -68,18 +74,28 @@ func builderExample() {
 	if err := client.Initialize(ctx); err != nil {
 		log.Fatalf("Failed to initialize: %v", err)
 	}
-	defer client.Shutdown(ctx)
+	defer func() {
+		if err := client.Shutdown(ctx); err != nil {
+			log.Printf("Failed to shutdown client: %v", err)
+		}
+	}()
 
 	// Send metrics
-	client.RecordGauge(ctx, "cpu.usage", 75.5, map[string]interface{}{
+	if err := client.RecordGauge(ctx, "cpu.usage", 75.5, map[string]interface{}{
 		"host": "server-01",
-	})
+	}); err != nil {
+		log.Printf("Failed to record gauge: %v", err)
+	}
 
-	client.RecordHistogram(ctx, "request.duration", 0.25, "s", map[string]interface{}{
+	if err := client.RecordHistogram(ctx, "request.duration", 0.25, "s", map[string]interface{}{
 		"endpoint": "/api/users",
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
-	client.Flush(ctx)
+	if err := client.Flush(ctx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
 	log.Println("Builder example completed")
 }
 
@@ -99,46 +115,62 @@ func completeExample() {
 	if err := client.Initialize(ctx); err != nil {
 		log.Fatalf("Failed to initialize: %v", err)
 	}
-	defer client.Shutdown(ctx)
+	defer func() {
+		if err := client.Shutdown(ctx); err != nil {
+			log.Printf("Failed to shutdown client: %v", err)
+		}
+	}()
 
 	// === METRICS ===
 	log.Println("Sending metrics...")
 
 	// Counter
-	client.IncrementCounter(ctx, "api.requests", 1, map[string]interface{}{
+	if err := client.IncrementCounter(ctx, "api.requests", 1, map[string]interface{}{
 		"method": "POST",
 		"path":   "/api/orders",
-	})
+	}); err != nil {
+		log.Printf("Failed to increment counter: %v", err)
+	}
 
 	// Gauge
-	client.RecordGauge(ctx, "memory.usage", 512.0, map[string]interface{}{
+	if err := client.RecordGauge(ctx, "memory.usage", 512.0, map[string]interface{}{
 		"unit": "MB",
-	})
+	}); err != nil {
+		log.Printf("Failed to record gauge: %v", err)
+	}
 
 	// Histogram
-	client.RecordHistogram(ctx, "db.query.duration", 0.125, "s", map[string]interface{}{
+	if err := client.RecordHistogram(ctx, "db.query.duration", 0.125, "s", map[string]interface{}{
 		"query_type": "SELECT",
 		"table":      "users",
-	})
+	}); err != nil {
+		log.Printf("Failed to record histogram: %v", err)
+	}
 
 	// === LOGS ===
 	log.Println("Sending logs...")
 
-	client.LogInfo(ctx, "Application started successfully", map[string]interface{}{
+	if err := client.LogInfo(ctx, "Application started successfully", map[string]interface{}{
 		"version": "2.0.0",
 		"port":    8080,
-	})
+	}); err != nil {
+		log.Printf("Failed to log info: %v", err)
+	}
 
-	client.LogWarn(ctx, "High memory usage detected", map[string]interface{}{
+	if err := client.LogWarn(ctx, "High memory usage detected", map[string]interface{}{
 		"memory_mb": 512,
 		"threshold": 400,
-	})
+	}); err != nil {
+		log.Printf("Failed to log warning: %v", err)
+	}
 
-	client.LogError(ctx, "Failed to connect to database", map[string]interface{}{
+	if err := client.LogError(ctx, "Failed to connect to database", map[string]interface{}{
 		"error":    "connection timeout",
 		"host":     "db.example.com",
 		"attempts": 3,
-	})
+	}); err != nil {
+		log.Printf("Failed to log error: %v", err)
+	}
 
 	// === TRACES ===
 	log.Println("Creating traces...")
@@ -156,14 +188,18 @@ func completeExample() {
 	time.Sleep(100 * time.Millisecond)
 
 	// Add event to span
-	client.AddSpanEvent(ctx, spanID, "validation.complete", map[string]interface{}{
+	if err := client.AddSpanEvent(ctx, spanID, "validation.complete", map[string]interface{}{
 		"valid": true,
-	})
+	}); err != nil {
+		log.Printf("Failed to add span event: %v", err)
+	}
 
 	time.Sleep(50 * time.Millisecond)
 
 	// End span
-	client.EndSpan(ctx, spanID, nil)
+	if err := client.EndSpan(ctx, spanID, nil); err != nil {
+		log.Printf("Failed to end span: %v", err)
+	}
 
 	// === FLUSH & SHUTDOWN ===
 	log.Println("Flushing telemetry...")

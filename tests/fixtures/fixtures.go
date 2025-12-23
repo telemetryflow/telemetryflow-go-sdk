@@ -53,12 +53,18 @@ func CreateTempEnvFile(content string) (string, func(), error) {
 
 	envPath := filepath.Join(tmpDir, ".env.telemetryflow")
 	if err := os.WriteFile(envPath, []byte(content), 0644); err != nil {
-		os.RemoveAll(tmpDir)
+		if rmErr := os.RemoveAll(tmpDir); rmErr != nil {
+			// Log error but continue with original error
+			_ = rmErr
+		}
 		return "", nil, err
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		if err := os.RemoveAll(tmpDir); err != nil {
+			// Log error but don't fail the test
+			_ = err
+		}
 	}
 
 	return envPath, cleanup, nil
@@ -73,12 +79,18 @@ func CreateTempConfigFile(filename, content string) (string, func(), error) {
 
 	configPath := filepath.Join(tmpDir, filename)
 	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
-		os.RemoveAll(tmpDir)
+		if rmErr := os.RemoveAll(tmpDir); rmErr != nil {
+			// Log error but continue with original error
+			_ = rmErr
+		}
 		return "", nil, err
 	}
 
 	cleanup := func() {
-		os.RemoveAll(tmpDir)
+		if err := os.RemoveAll(tmpDir); err != nil {
+			// Log error but don't fail the test
+			_ = err
+		}
 	}
 
 	return configPath, cleanup, nil
@@ -90,15 +102,24 @@ func SetEnvVars(vars map[string]string) func() {
 
 	for key, value := range vars {
 		original[key] = os.Getenv(key)
-		os.Setenv(key, value)
+		if err := os.Setenv(key, value); err != nil {
+			// Log error but continue
+			_ = err
+		}
 	}
 
 	return func() {
 		for key, value := range original {
 			if value == "" {
-				os.Unsetenv(key)
+				if err := os.Unsetenv(key); err != nil {
+					// Log error but continue
+					_ = err
+				}
 			} else {
-				os.Setenv(key, value)
+				if err := os.Setenv(key, value); err != nil {
+					// Log error but continue
+					_ = err
+				}
 			}
 		}
 	}

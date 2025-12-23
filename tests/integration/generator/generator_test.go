@@ -178,7 +178,11 @@ func TestGeneratorInit(t *testing.T) {
 	t.Run("should create project structure", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "telemetryflow-init-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(generatorBinary, "--no-banner", "init",
 			"--project", "test-project",
@@ -235,7 +239,11 @@ func TestRESTAPIGeneratorNew(t *testing.T) {
 	t.Run("should create DDD project structure", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-new-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "new",
 			"--name", "test-api",
@@ -278,7 +286,11 @@ func TestRESTAPIGeneratorNew(t *testing.T) {
 	t.Run("should generate documentation files", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-docs-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "new",
 			"--name", "test-api",
@@ -312,7 +324,11 @@ func TestGeneratorConfig(t *testing.T) {
 	t.Run("should generate config file", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "telemetryflow-config-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(generatorBinary, "--no-banner", "config",
 			"--service", "test-service",
@@ -357,7 +373,11 @@ func TestGeneratorExample(t *testing.T) {
 		t.Run("should generate "+exType+" example", func(t *testing.T) {
 			tmpDir, err := os.MkdirTemp("", "telemetryflow-example-test-*")
 			require.NoError(t, err)
-			defer os.RemoveAll(tmpDir)
+			defer func() {
+				if err := os.RemoveAll(tmpDir); err != nil {
+					t.Logf("Failed to remove temp dir: %v", err)
+				}
+			}()
 
 			cmd := exec.Command(generatorBinary, "--no-banner", "example", exType,
 				"--output", tmpDir,
@@ -388,7 +408,11 @@ func TestRESTAPIGeneratorEntity(t *testing.T) {
 	t.Run("should require entity name", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-entity-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "entity",
 			"--output", tmpDir,
@@ -413,7 +437,11 @@ func TestGeneratedGoModValidity(t *testing.T) {
 	t.Run("should generate valid go.mod", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-gomod-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "new",
 			"--name", "test-api",
@@ -448,7 +476,11 @@ func TestGeneratedProjectCompilation(t *testing.T) {
 	t.Run("generated project should have valid syntax", func(t *testing.T) {
 		tmpDir, err := os.MkdirTemp("", "restapi-compile-test-*")
 		require.NoError(t, err)
-		defer os.RemoveAll(tmpDir)
+		defer func() {
+			if err := os.RemoveAll(tmpDir); err != nil {
+				t.Logf("Failed to remove temp dir: %v", err)
+			}
+		}()
 
 		// Generate project
 		cmd := exec.Command(restapiGeneratorBinary, "--no-banner", "new",
