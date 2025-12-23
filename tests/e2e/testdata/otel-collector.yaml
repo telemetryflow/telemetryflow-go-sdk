@@ -1,0 +1,57 @@
+# =============================================================================
+# OpenTelemetry Collector E2E Test Configuration
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 100
+
+exporters:
+  debug:
+    verbosity: detailed
+
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: "/"
+
+service:
+  extensions: [health_check]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+
+  telemetry:
+    logs:
+      level: debug
+    metrics:
+      address: 0.0.0.0:8888

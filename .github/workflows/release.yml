@@ -1,0 +1,455 @@
+# =============================================================================
+# TelemetryFlow Go SDK - Release Workflow
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# This workflow builds and releases TelemetryFlow Go SDK generators:
+# - telemetryflow-gen: SDK code generator
+# - telemetryflow-restapi: RESTful API generator (DDD + CQRS)
+#
+# Platforms:
+# - Linux: amd64, arm64
+# - macOS: amd64 (Intel), arm64 (Apple Silicon)
+# - Windows: amd64
+#
+# =============================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  GO_VERSION: '1.24'
+  PRODUCT_NAME: TelemetryFlow Go SDK
+  VENDOR: DevOpsCorner Indonesia
+  MAINTAINER: support@telemetryflow.id
+  LICENSE: Apache-2.0
+  HOMEPAGE: https://telemetryflow.id
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # ===========================================================================
+  # Prepare Release
+  # ===========================================================================
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit: ${{ steps.version.outputs.commit }}
+      branch: ${{ steps.version.outputs.branch }}
+      build_time: ${{ steps.version.outputs.build_time }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+  # ===========================================================================
+  # Build Linux
+  # ===========================================================================
+  build-linux:
+    name: Build Linux (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build generators
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+          BRANCH: ${{ needs.prepare.outputs.branch }}
+          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
+        run: |
+          mkdir -p dist
+          LDFLAGS="-s -w \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
+
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-gen-linux-${{ matrix.arch }} \
+            ./cmd/generator
+
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-restapi-linux-${{ matrix.arch }} \
+            ./cmd/generator-restfulapi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: dist/
+          retention-days: 1
+
+  # ===========================================================================
+  # Build macOS
+  # ===========================================================================
+  build-macos:
+    name: Build macOS (${{ matrix.arch }})
+    runs-on: macos-latest
+    needs: prepare
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build generators
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+          BRANCH: ${{ needs.prepare.outputs.branch }}
+          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
+        run: |
+          mkdir -p dist
+          LDFLAGS="-s -w \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
+
+          CGO_ENABLED=0 GOOS=darwin GOARCH=${{ matrix.arch }} go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-gen-darwin-${{ matrix.arch }} \
+            ./cmd/generator
+
+          CGO_ENABLED=0 GOOS=darwin GOARCH=${{ matrix.arch }} go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-restapi-darwin-${{ matrix.arch }} \
+            ./cmd/generator-restfulapi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-darwin-${{ matrix.arch }}
+          path: dist/
+          retention-days: 1
+
+  # ===========================================================================
+  # Build Windows
+  # ===========================================================================
+  build-windows:
+    name: Build Windows (amd64)
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build generators
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          COMMIT: ${{ needs.prepare.outputs.commit }}
+          BRANCH: ${{ needs.prepare.outputs.branch }}
+          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
+        run: |
+          mkdir -p dist
+          LDFLAGS="-s -w \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
+            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
+
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-gen-windows-amd64.exe \
+            ./cmd/generator
+
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
+            -ldflags "${LDFLAGS}" \
+            -o dist/telemetryflow-restapi-windows-amd64.exe \
+            ./cmd/generator-restfulapi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-windows-amd64
+          path: dist/
+          retention-days: 1
+
+  # ===========================================================================
+  # Package Release Assets
+  # ===========================================================================
+  package:
+    name: Package (${{ matrix.os }}-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: [prepare, build-linux, build-macos, build-windows]
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: amd64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist
+
+      - name: Create package (Unix)
+        if: matrix.os != 'windows'
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_NAME="telemetryflow-sdk-${VERSION}-${{ matrix.os }}-${{ matrix.arch }}"
+          mkdir -p "${PKG_NAME}"
+
+          cp dist/telemetryflow-gen-${{ matrix.os }}-${{ matrix.arch }} "${PKG_NAME}/telemetryflow-gen"
+          cp dist/telemetryflow-restapi-${{ matrix.os }}-${{ matrix.arch }} "${PKG_NAME}/telemetryflow-restapi"
+          chmod +x "${PKG_NAME}/telemetryflow-gen" "${PKG_NAME}/telemetryflow-restapi"
+
+          cp README.md "${PKG_NAME}/" 2>/dev/null || true
+          cp LICENSE "${PKG_NAME}/" 2>/dev/null || true
+
+          # Create installation script
+          cat > "${PKG_NAME}/install.sh" << 'EOF'
+          #!/bin/bash
+          set -e
+          INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+          echo "Installing TelemetryFlow SDK generators to ${INSTALL_DIR}..."
+          sudo cp telemetryflow-gen "${INSTALL_DIR}/"
+          sudo cp telemetryflow-restapi "${INSTALL_DIR}/"
+          sudo chmod +x "${INSTALL_DIR}/telemetryflow-gen" "${INSTALL_DIR}/telemetryflow-restapi"
+          echo "Installation complete!"
+          echo "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
+          EOF
+          chmod +x "${PKG_NAME}/install.sh"
+
+          tar -czvf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
+
+      - name: Create package (Windows)
+        if: matrix.os == 'windows'
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_NAME="telemetryflow-sdk-${VERSION}-windows-amd64"
+          mkdir -p "${PKG_NAME}"
+
+          cp dist/telemetryflow-gen-windows-amd64.exe "${PKG_NAME}/telemetryflow-gen.exe"
+          cp dist/telemetryflow-restapi-windows-amd64.exe "${PKG_NAME}/telemetryflow-restapi.exe"
+
+          cp README.md "${PKG_NAME}/" 2>/dev/null || true
+          cp LICENSE "${PKG_NAME}/" 2>/dev/null || true
+
+          # Create installation script
+          cat > "${PKG_NAME}/install.ps1" << 'EOF'
+          # TelemetryFlow SDK Generators - Windows Installer
+          $ErrorActionPreference = "Stop"
+          $InstallDir = "C:\Program Files\TelemetryFlow\SDK"
+
+          Write-Host "Installing TelemetryFlow SDK generators..." -ForegroundColor Green
+
+          New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+          Copy-Item -Path ".\telemetryflow-gen.exe" -Destination "$InstallDir\" -Force
+          Copy-Item -Path ".\telemetryflow-restapi.exe" -Destination "$InstallDir\" -Force
+
+          $envPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+          if ($envPath -notlike "*$InstallDir*") {
+              [Environment]::SetEnvironmentVariable("Path", "$envPath;$InstallDir", "Machine")
+          }
+
+          Write-Host "Installation complete!" -ForegroundColor Green
+          Write-Host "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
+          EOF
+
+          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            *.tar.gz
+            *.zip
+          retention-days: 1
+
+  # ===========================================================================
+  # Create GitHub Release
+  # ===========================================================================
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [prepare, package]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all packages
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: package-*
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+          ls -la release/
+
+      - name: Generate checksums
+        run: |
+          cd release
+          sha256sum * > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ env.PRODUCT_NAME }} v${{ needs.prepare.outputs.version }}"
+          tag_name: "v${{ needs.prepare.outputs.version }}"
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          generate_release_notes: true
+          files: |
+            release/*
+          body: |
+            ## ${{ env.PRODUCT_NAME }} v${{ needs.prepare.outputs.version }}
+
+            ### Included Generators
+
+            | Generator | Description |
+            |-----------|-------------|
+            | `telemetryflow-gen` | SDK code generator for TelemetryFlow integration |
+            | `telemetryflow-restapi` | DDD + CQRS RESTful API generator with Echo |
+
+            ### Downloads
+
+            | Platform | Architecture | Package |
+            |----------|--------------|---------|
+            | Linux | amd64 | tar.gz |
+            | Linux | arm64 | tar.gz |
+            | macOS | Intel (amd64) | tar.gz |
+            | macOS | Apple Silicon (arm64) | tar.gz |
+            | Windows | amd64 | zip |
+
+            ### Installation
+
+            **Linux/macOS:**
+            ```bash
+            tar -xzf telemetryflow-sdk-${{ needs.prepare.outputs.version }}-<os>-<arch>.tar.gz
+            cd telemetryflow-sdk-${{ needs.prepare.outputs.version }}-<os>-<arch>
+            ./install.sh
+            ```
+
+            **Windows (PowerShell as Administrator):**
+            ```powershell
+            Expand-Archive telemetryflow-sdk-${{ needs.prepare.outputs.version }}-windows-amd64.zip
+            cd telemetryflow-sdk-${{ needs.prepare.outputs.version }}-windows-amd64
+            .\install.ps1
+            ```
+
+            ### Usage
+
+            **Generate SDK integration:**
+            ```bash
+            telemetryflow-gen init --project myapp --service my-service
+            ```
+
+            **Generate RESTful API project:**
+            ```bash
+            telemetryflow-restapi new --name my-api --module github.com/example/my-api
+            ```
+
+            ### Verification
+
+            Verify downloads using SHA256 checksums in `checksums-sha256.txt`.
+
+            ---
+
+            :books: [Documentation](https://docs.telemetryflow.id) | :bug: [Report Issues](https://github.com/telemetryflow/telemetryflow-go-sdk/issues)
+
+  # ===========================================================================
+  # Summary
+  # ===========================================================================
+  summary:
+    name: Release Summary
+    runs-on: ubuntu-latest
+    needs: [prepare, release]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Product** | ${{ env.PRODUCT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | ${{ needs.prepare.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | ${{ needs.prepare.outputs.commit }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ needs.prepare.outputs.branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Time** | ${{ needs.prepare.outputs.build_time }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Generators" >> $GITHUB_STEP_SUMMARY
+          echo "- telemetryflow-gen" >> $GITHUB_STEP_SUMMARY
+          echo "- telemetryflow-restapi" >> $GITHUB_STEP_SUMMARY

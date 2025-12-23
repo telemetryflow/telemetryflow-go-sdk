@@ -1,0 +1,166 @@
+# =============================================================================
+# TelemetryFlow Go SDK - Docker Compose
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# Usage:
+#   # Build SDK image
+#   docker-compose build
+#
+#   # Run SDK generator (init command)
+#   docker-compose run --rm sdk-gen init --project myapp --service my-service
+#
+#   # Run RESTful API generator
+#   docker-compose run --rm sdk-restapi new --name my-api
+#
+#   # Start development environment with observability stack
+#   docker-compose up -d otel-collector jaeger
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # SDK Generator
+  # ---------------------------------------------------------------------------
+  sdk-gen:
+    container_name: ${CONTAINER_NAME:-telemetryflow-sdk-gen}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-sdk}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+    entrypoint: ["/usr/local/bin/telemetryflow-gen"]
+    command: ["--help"]
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    networks:
+      - telemetryflow-sdk
+
+  # ---------------------------------------------------------------------------
+  # RESTful API Generator
+  # ---------------------------------------------------------------------------
+  sdk-restapi:
+    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-sdk-restapi}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-sdk}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+    entrypoint: ["/usr/local/bin/telemetryflow-restapi"]
+    command: ["--help"]
+    volumes:
+      - ./workspace:/workspace
+    working_dir: /workspace
+    networks:
+      - telemetryflow-sdk
+
+  # ---------------------------------------------------------------------------
+  # OpenTelemetry Collector (for local development)
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    container_name: otel-collector-dev
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - "${OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC
+      - "${OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP
+      - "${OTEL_METRICS_PORT:-8888}:8888"   # Prometheus metrics
+      - "${OTEL_HEALTH_PORT:-13133}:13133"  # Health check
+    volumes:
+      - ./configs/otel-collector.yaml:/etc/otel/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - telemetryflow-sdk
+    profiles:
+      - dev
+      - full
+
+  # ---------------------------------------------------------------------------
+  # Jaeger (for trace visualization)
+  # ---------------------------------------------------------------------------
+  jaeger:
+    container_name: jaeger-dev
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"     # Jaeger UI
+      - "${JAEGER_HTTP_PORT:-14268}:14268"   # Jaeger HTTP collector
+      - "${JAEGER_GRPC_PORT:-14250}:14250"   # Jaeger gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - telemetryflow-sdk
+    profiles:
+      - dev
+      - full
+
+  # ---------------------------------------------------------------------------
+  # Prometheus (for metrics visualization)
+  # ---------------------------------------------------------------------------
+  prometheus:
+    container_name: prometheus-dev
+    image: prom/prometheus:v2.48.0
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./configs/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - telemetryflow-sdk
+    profiles:
+      - full
+
+  # ---------------------------------------------------------------------------
+  # Grafana (for dashboards)
+  # ---------------------------------------------------------------------------
+  grafana:
+    container_name: grafana-dev
+    image: grafana/grafana:10.2.2
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - telemetryflow-sdk
+    profiles:
+      - full
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  telemetryflow-sdk:
+    driver: bridge
+    name: telemetryflow-sdk-network

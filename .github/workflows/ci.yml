@@ -1,0 +1,272 @@
+# =============================================================================
+# TelemetryFlow Go SDK - CI Workflow
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# This workflow runs tests and linting for the TelemetryFlow Go SDK:
+# - Unit tests
+# - Integration tests
+# - Linting with golangci-lint
+# - Code coverage
+#
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.24'
+  PRODUCT_NAME: TelemetryFlow Go SDK
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  # ===========================================================================
+  # Lint
+  # ===========================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  # ===========================================================================
+  # Unit Tests
+  # ===========================================================================
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run unit tests
+        run: |
+          go test -v -race -short -coverprofile=coverage-unit.out ./tests/unit/...
+
+      - name: Upload unit test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage-unit.out
+          retention-days: 7
+
+  # ===========================================================================
+  # Integration Tests
+  # ===========================================================================
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test-unit
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build generators
+        run: make build-generators
+
+      - name: Run integration tests
+        run: |
+          go test -v -race -coverprofile=coverage-integration.out ./tests/integration/...
+        env:
+          BUILD_DIR: ./build
+
+      - name: Upload integration test coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: coverage-integration.out
+          retention-days: 7
+
+  # ===========================================================================
+  # E2E Tests
+  # ===========================================================================
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: test-integration
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build generators
+        run: make build-generators
+
+      - name: Run E2E tests
+        run: |
+          go test -v -timeout 10m ./tests/e2e/...
+        env:
+          BUILD_DIR: ./build
+
+  # ===========================================================================
+  # Build Generators
+  # ===========================================================================
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: [lint, test-unit]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build generators (Unix)
+        if: matrix.os != 'windows-latest'
+        run: make build-generators
+
+      - name: Build generators (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          go build -o build/telemetryflow-gen.exe ./cmd/generator
+          go build -o build/telemetryflow-restapi.exe ./cmd/generator-restfulapi
+
+      - name: Verify binaries (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          ./build/telemetryflow-gen version
+          ./build/telemetryflow-restapi version
+
+      - name: Verify binaries (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          .\build\telemetryflow-gen.exe version
+          .\build\telemetryflow-restapi.exe version
+
+  # ===========================================================================
+  # Coverage Report
+  # ===========================================================================
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Download unit coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: .
+
+      - name: Download integration coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-integration
+          path: .
+
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage-unit.out -o coverage-unit.html
+          go tool cover -html=coverage-integration.out -o coverage-integration.html
+
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage-unit.html
+            coverage-integration.html
+          retention-days: 30
+
+  # ===========================================================================
+  # Summary
+  # ===========================================================================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit, test-integration, test-e2e, build]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.test-unit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.test-integration.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.test-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY

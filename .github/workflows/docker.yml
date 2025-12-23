@@ -1,0 +1,280 @@
+# =============================================================================
+# TelemetryFlow Go SDK - Docker Image Builder Workflow
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# This workflow builds and publishes Docker images for TelemetryFlow SDK tools:
+# - Multi-platform support: linux/amd64, linux/arm64
+# - Semantic versioning tags
+# - Docker Hub
+#
+# =============================================================================
+
+name: Docker Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*.*.*'
+    paths:
+      - 'Dockerfile*'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'Dockerfile*'
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., 1.0.0)'
+        required: false
+        default: ''
+      push:
+        description: 'Push images to registry'
+        required: false
+        type: boolean
+        default: true
+      platforms:
+        description: 'Target platforms'
+        required: false
+        default: 'linux/amd64,linux/arm64'
+
+env:
+  REGISTRY_DOCKER: docker.io
+  IMAGE_NAME: telemetryflow/telemetryflow-sdk
+  PRODUCT_NAME: TelemetryFlow Go SDK
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  security-events: write
+
+jobs:
+  # ===========================================================================
+  # Prepare Build Context
+  # ===========================================================================
+  prepare:
+    name: Prepare Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      commit: ${{ steps.info.outputs.commit }}
+      branch: ${{ steps.info.outputs.branch }}
+      build_time: ${{ steps.info.outputs.build_time }}
+      push: ${{ steps.check.outputs.push }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get build info
+        id: info
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+          echo "build_time=$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Check if should push
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "push=false" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "push=${{ github.event.inputs.push }}" >> $GITHUB_OUTPUT
+          else
+            echo "push=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_DOCKER }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') || github.ref == format('refs/heads/{0}', 'master') }}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=${{ env.PRODUCT_NAME }}
+            org.opencontainers.image.description=Go SDK and code generators for TelemetryFlow integration
+            org.opencontainers.image.vendor=TelemetryFlow
+            io.telemetryflow.product=${{ env.PRODUCT_NAME }}
+            io.telemetryflow.component=sdk
+            io.telemetryflow.platform=CEOP
+
+  # ===========================================================================
+  # Build and Push Docker Image
+  # ===========================================================================
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile << 'EOF'
+          # =============================================================================
+          # TelemetryFlow Go SDK - Multi-stage Dockerfile
+          # =============================================================================
+          FROM golang:1.24-alpine AS builder
+
+          ARG VERSION=dev
+          ARG GIT_COMMIT=unknown
+          ARG GIT_BRANCH=unknown
+          ARG BUILD_TIME=unknown
+
+          WORKDIR /build
+
+          # Install build dependencies
+          RUN apk add --no-cache git make
+
+          # Copy go mod files
+          COPY go.mod go.sum ./
+          RUN go mod download
+
+          # Copy source
+          COPY . .
+
+          # Build generators
+          RUN CGO_ENABLED=0 go build \
+              -ldflags "-s -w \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}" \
+              -o /bin/telemetryflow-gen ./cmd/generator
+
+          RUN CGO_ENABLED=0 go build \
+              -ldflags "-s -w \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH} \
+                -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}" \
+              -o /bin/telemetryflow-restapi ./cmd/generator-restfulapi
+
+          # =============================================================================
+          # Final image
+          # =============================================================================
+          FROM alpine:3.19
+
+          RUN apk add --no-cache ca-certificates tzdata
+
+          COPY --from=builder /bin/telemetryflow-gen /usr/local/bin/
+          COPY --from=builder /bin/telemetryflow-restapi /usr/local/bin/
+
+          # Labels
+          LABEL org.opencontainers.image.title="TelemetryFlow Go SDK"
+          LABEL org.opencontainers.image.description="Go SDK and code generators for TelemetryFlow"
+          LABEL org.opencontainers.image.vendor="TelemetryFlow"
+          LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+          WORKDIR /workspace
+
+          ENTRYPOINT ["/usr/local/bin/telemetryflow-gen"]
+          CMD ["--help"]
+          EOF
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: needs.prepare.outputs.push == 'true' && vars.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_DOCKER }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="${{ needs.prepare.outputs.commit }}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: ${{ github.event.inputs.platforms || 'linux/amd64,linux/arm64' }}
+          push: ${{ needs.prepare.outputs.push == 'true' }}
+          tags: ${{ needs.prepare.outputs.tags }}
+          labels: ${{ needs.prepare.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            GIT_COMMIT=${{ needs.prepare.outputs.commit }}
+            GIT_BRANCH=${{ needs.prepare.outputs.branch }}
+            BUILD_TIME=${{ needs.prepare.outputs.build_time }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================================================
+  # Summary
+  # ===========================================================================
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [prepare, build]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Product** | ${{ env.PRODUCT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | ${{ needs.prepare.outputs.commit }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | ${{ needs.prepare.outputs.branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Build Time** | ${{ needs.prepare.outputs.build_time }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Push** | ${{ needs.prepare.outputs.push }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.prepare.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Commands" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
+          echo "docker run --rm ${{ env.IMAGE_NAME }}:latest --help" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

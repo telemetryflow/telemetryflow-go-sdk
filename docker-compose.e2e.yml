@@ -1,0 +1,193 @@
+# =============================================================================
+# TelemetryFlow Go SDK - E2E Test Docker Compose
+# =============================================================================
+#
+# TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# Usage:
+#   # Start E2E test environment
+#   docker-compose -f docker-compose.e2e.yml up -d
+#
+#   # Wait for services to be ready
+#   ./scripts/wait-for-services.sh
+#
+#   # Run E2E tests
+#   make test-e2e
+#
+#   # Stop E2E test environment
+#   docker-compose -f docker-compose.e2e.yml down
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # SDK Generator E2E Test
+  # ---------------------------------------------------------------------------
+  sdk-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telemetryflow-sdk-e2e
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "TelemetryFlow SDK E2E Test Container"
+        echo "Running SDK generator tests..."
+        /usr/local/bin/telemetryflow-gen version
+        /usr/local/bin/telemetryflow-restapi version
+        echo "Generators are working correctly!"
+        # Keep container running for test execution
+        tail -f /dev/null
+    volumes:
+      - ./workspace:/workspace
+      - ./tests/e2e/testdata:/testdata:ro
+    working_dir: /workspace
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - e2e-test
+
+  # ---------------------------------------------------------------------------
+  # Generated API E2E Test
+  # ---------------------------------------------------------------------------
+  generated-api:
+    build:
+      context: ./workspace/e2e-test-api
+      dockerfile: Dockerfile
+    container_name: generated-api-e2e
+    environment:
+      - APP_ENV=test
+      - APP_PORT=8080
+      - DB_DRIVER=sqlite
+      - DB_NAME=:memory:
+      - TELEMETRYFLOW_ENDPOINT=otel-collector:4317
+      - TELEMETRYFLOW_ENABLE_TELEMETRY=true
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - e2e-test
+    profiles:
+      - api-test
+
+  # ---------------------------------------------------------------------------
+  # OpenTelemetry Collector
+  # ---------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    container_name: otel-collector-e2e
+    command: ["--config=/etc/otel/config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Prometheus metrics
+      - "13133:13133" # Health check
+    volumes:
+      - ./tests/e2e/testdata/otel-collector.yaml:/etc/otel/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - e2e-test
+
+  # ---------------------------------------------------------------------------
+  # Mock TelemetryFlow Backend
+  # ---------------------------------------------------------------------------
+  mock-backend:
+    image: nginx:alpine
+    container_name: mock-backend-e2e
+    ports:
+      - "3100:80"
+    volumes:
+      - ./tests/e2e/testdata/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tests/e2e/testdata/mock-responses:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - e2e-test
+
+  # ---------------------------------------------------------------------------
+  # Jaeger (for trace verification)
+  # ---------------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    container_name: jaeger-e2e
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14268:14268" # Jaeger HTTP collector
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - e2e-test
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL (for generated API testing)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres-e2e
+    environment:
+      - POSTGRES_USER=test
+      - POSTGRES_PASSWORD=test
+      - POSTGRES_DB=e2e_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-e2e-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test -d e2e_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - e2e-test
+    profiles:
+      - api-test
+
+  # ---------------------------------------------------------------------------
+  # Redis (for caching tests)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: redis-e2e
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - e2e-test
+    profiles:
+      - api-test
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  postgres-e2e-data:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  e2e-test:
+    driver: bridge
+    name: telemetryflow-e2e-network

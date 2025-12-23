@@ -1,0 +1,175 @@
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/telemetryflow/telemetryflow-go-sdk/pkg/telemetryflow"
+)
+
+func main() {
+	// Example 1: Simple initialization from environment variables
+	simpleExample()
+
+	// Example 2: Builder pattern with custom configuration
+	builderExample()
+
+	// Example 3: Complete example with all signal types
+	completeExample()
+}
+
+func simpleExample() {
+	log.Println("=== Simple Example ===")
+
+	// Create client from environment variables
+	// Requires: TELEMETRYFLOW_API_KEY_ID, TELEMETRYFLOW_API_KEY_SECRET,
+	//           TELEMETRYFLOW_SERVICE_NAME in environment
+	client, err := telemetryflow.NewFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	// Initialize the SDK
+	ctx := context.Background()
+	if err := client.Initialize(ctx); err != nil {
+		log.Fatalf("Failed to initialize: %v", err)
+	}
+	defer client.Shutdown(ctx)
+
+	// Send a simple metric
+	if err := client.IncrementCounter(ctx, "requests.total", 1, map[string]interface{}{
+		"method": "GET",
+		"status": 200,
+	}); err != nil {
+		log.Printf("Failed to send metric: %v", err)
+	}
+
+	// Flush and wait
+	client.Flush(ctx)
+	log.Println("Simple example completed")
+}
+
+func builderExample() {
+	log.Println("=== Builder Example ===")
+
+	// Build client with fluent API
+	client := telemetryflow.NewBuilder().
+		WithAPIKey("tfk_your_key_id", "tfs_your_key_secret").
+		WithEndpoint("api.telemetryflow.id:4317").
+		WithService("my-go-service", "1.0.0").
+		WithEnvironment("production").
+		WithGRPC().
+		WithCustomAttribute("team", "backend").
+		WithCustomAttribute("region", "us-east-1").
+		MustBuild()
+
+	ctx := context.Background()
+	if err := client.Initialize(ctx); err != nil {
+		log.Fatalf("Failed to initialize: %v", err)
+	}
+	defer client.Shutdown(ctx)
+
+	// Send metrics
+	client.RecordGauge(ctx, "cpu.usage", 75.5, map[string]interface{}{
+		"host": "server-01",
+	})
+
+	client.RecordHistogram(ctx, "request.duration", 0.25, "s", map[string]interface{}{
+		"endpoint": "/api/users",
+	})
+
+	client.Flush(ctx)
+	log.Println("Builder example completed")
+}
+
+func completeExample() {
+	log.Println("=== Complete Example ===")
+
+	// Create client
+	client := telemetryflow.NewBuilder().
+		WithAPIKey("tfk_your_key_id", "tfs_your_key_secret").
+		WithEndpoint("api.telemetryflow.id:4317").
+		WithService("complete-service", "2.0.0").
+		WithEnvironment("staging").
+		WithSignals(true, true, true). // Enable all signals
+		MustBuild()
+
+	ctx := context.Background()
+	if err := client.Initialize(ctx); err != nil {
+		log.Fatalf("Failed to initialize: %v", err)
+	}
+	defer client.Shutdown(ctx)
+
+	// === METRICS ===
+	log.Println("Sending metrics...")
+
+	// Counter
+	client.IncrementCounter(ctx, "api.requests", 1, map[string]interface{}{
+		"method": "POST",
+		"path":   "/api/orders",
+	})
+
+	// Gauge
+	client.RecordGauge(ctx, "memory.usage", 512.0, map[string]interface{}{
+		"unit": "MB",
+	})
+
+	// Histogram
+	client.RecordHistogram(ctx, "db.query.duration", 0.125, "s", map[string]interface{}{
+		"query_type": "SELECT",
+		"table":      "users",
+	})
+
+	// === LOGS ===
+	log.Println("Sending logs...")
+
+	client.LogInfo(ctx, "Application started successfully", map[string]interface{}{
+		"version": "2.0.0",
+		"port":    8080,
+	})
+
+	client.LogWarn(ctx, "High memory usage detected", map[string]interface{}{
+		"memory_mb": 512,
+		"threshold": 400,
+	})
+
+	client.LogError(ctx, "Failed to connect to database", map[string]interface{}{
+		"error":    "connection timeout",
+		"host":     "db.example.com",
+		"attempts": 3,
+	})
+
+	// === TRACES ===
+	log.Println("Creating traces...")
+
+	// Start a span
+	spanID, err := client.StartSpan(ctx, "process-order", "internal", map[string]interface{}{
+		"order_id":    "12345",
+		"customer_id": "67890",
+	})
+	if err != nil {
+		log.Printf("Failed to start span: %v", err)
+	}
+
+	// Simulate some work
+	time.Sleep(100 * time.Millisecond)
+
+	// Add event to span
+	client.AddSpanEvent(ctx, spanID, "validation.complete", map[string]interface{}{
+		"valid": true,
+	})
+
+	time.Sleep(50 * time.Millisecond)
+
+	// End span
+	client.EndSpan(ctx, spanID, nil)
+
+	// === FLUSH & SHUTDOWN ===
+	log.Println("Flushing telemetry...")
+	if err := client.Flush(ctx); err != nil {
+		log.Printf("Failed to flush: %v", err)
+	}
+
+	log.Println("Complete example finished")
+}

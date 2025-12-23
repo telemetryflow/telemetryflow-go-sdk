@@ -1,0 +1,35 @@
+# Build artifacts
+/build/
+/dist/
+
+# Binaries (at project root only)
+/tfo-agent
+/tfo-agent.exe
+*.exe
+
+# Test artifacts
+coverage.out
+coverage.html
+*.test
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config files with secrets
+tfo-agent.local.yaml
+*.secret.yaml
+
+# Buffer data
+/buffer/
+
+# Logs
+*.log
+logs/
