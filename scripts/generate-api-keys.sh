@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Generate TelemetryFlow API Keys
+# Usage: ./scripts/generate-api-keys.sh
+
+generate_random_string() {
+    local length=$1
+    openssl rand -hex $((length / 2)) | head -c $length
+}
+
+# Generate API Key ID (32 chars after tfk_)
+API_KEY_ID="tfk_$(generate_random_string 32)"
+
+# Generate API Key Secret (64 chars after tfs_)
+API_KEY_SECRET="tfs_$(generate_random_string 64)"
+
+echo "# TelemetryFlow API Keys"
+echo "TELEMETRYFLOW_API_KEY_ID=$API_KEY_ID"
+echo "TELEMETRYFLOW_API_KEY_SECRET=$API_KEY_SECRET"

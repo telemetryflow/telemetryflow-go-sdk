@@ -39,6 +39,7 @@ env:
   PRODUCT_NAME: TelemetryFlow Go SDK
   VENDOR: DevOpsCorner Indonesia
   MAINTAINER: support@telemetryflow.id
+  DESCRIPTION: Enterprise-grade Go SDK for TelemetryFlow - the observability platform that provides unified metrics, logs, and traces collection following OpenTelemetry standards.
   LICENSE: Apache-2.0
   HOMEPAGE: https://telemetryflow.id
 
@@ -97,29 +98,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Download dependencies
+        run: make deps
+
       - name: Build generators
+        run: make ci-build-generators
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-          COMMIT: ${{ needs.prepare.outputs.commit }}
-          BRANCH: ${{ needs.prepare.outputs.branch }}
-          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
-        run: |
-          mkdir -p dist
-          LDFLAGS="-s -w \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
-
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-gen-linux-${{ matrix.arch }} \
-            ./cmd/generator
-
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ matrix.arch }} go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-restapi-linux-${{ matrix.arch }} \
-            ./cmd/generator-restfulapi
+          GOOS: linux
+          GOARCH: ${{ matrix.arch }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -148,29 +135,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Download dependencies
+        run: make deps
+
       - name: Build generators
+        run: make ci-build-generators
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-          COMMIT: ${{ needs.prepare.outputs.commit }}
-          BRANCH: ${{ needs.prepare.outputs.branch }}
-          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
-        run: |
-          mkdir -p dist
-          LDFLAGS="-s -w \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
-
-          CGO_ENABLED=0 GOOS=darwin GOARCH=${{ matrix.arch }} go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-gen-darwin-${{ matrix.arch }} \
-            ./cmd/generator
-
-          CGO_ENABLED=0 GOOS=darwin GOARCH=${{ matrix.arch }} go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-restapi-darwin-${{ matrix.arch }} \
-            ./cmd/generator-restfulapi
+          GOOS: darwin
+          GOARCH: ${{ matrix.arch }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -196,29 +169,15 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Download dependencies
+        run: make deps
+
       - name: Build generators
+        run: make ci-build-generators
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
-          COMMIT: ${{ needs.prepare.outputs.commit }}
-          BRANCH: ${{ needs.prepare.outputs.branch }}
-          BUILD_TIME: ${{ needs.prepare.outputs.build_time }}
-        run: |
-          mkdir -p dist
-          LDFLAGS="-s -w \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${COMMIT} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${BRANCH} \
-            -X github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}"
-
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-gen-windows-amd64.exe \
-            ./cmd/generator
-
-          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build \
-            -ldflags "${LDFLAGS}" \
-            -o dist/telemetryflow-restapi-windows-amd64.exe \
-            ./cmd/generator-restfulapi
+          GOOS: windows
+          GOARCH: amd64
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

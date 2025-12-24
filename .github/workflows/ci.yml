@@ -83,30 +83,19 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Verify dependencies
-        run: go mod verify
+      - name: Download and verify dependencies
+        run: make deps-verify
 
       - name: Check formatting
-        run: |
-          if [ -n "$(gofmt -l .)" ]; then
-            echo "The following files need formatting:"
-            gofmt -l .
-            exit 1
-          fi
+        run: make fmt-check
 
       - name: Run go vet
-        run: go vet ./...
-
-      - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+        run: make vet
 
       - name: Run staticcheck
-        run: staticcheck ./...
+        run: make staticcheck
 
-      - name: Install golangci-lint
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
@@ -132,11 +121,10 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: go mod download
+        run: make deps
 
       - name: Run unit tests
-        run: |
-          go test -v -race -timeout 5m -coverprofile=coverage-unit.out -covermode=atomic ./tests/unit/...
+        run: make test-unit-ci
 
       - name: Upload unit test coverage
         uses: actions/upload-artifact@v4
@@ -164,16 +152,10 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: go mod download
-
-      - name: Build generators
-        run: make build-generators
+        run: make deps
 
       - name: Run integration tests
-        run: |
-          go test -v -race -coverprofile=coverage-integration.out ./tests/integration/...
-        env:
-          BUILD_DIR: ./build
+        run: make test-integration-ci
 
       - name: Upload integration test coverage
         uses: actions/upload-artifact@v4
@@ -183,7 +165,7 @@ jobs:
           retention-days: 7
 
   # ===========================================================================
-  # E2E Tests
+  # E2E Tests (Optional)
   # ===========================================================================
   test-e2e:
     name: E2E Tests
@@ -201,16 +183,10 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: go mod download
-
-      - name: Build generators
-        run: make build-generators
+        run: make deps
 
       - name: Run E2E tests
-        run: |
-          go test -v -timeout 10m ./tests/e2e/...
-        env:
-          BUILD_DIR: ./build
+        run: make test-e2e-ci
 
   # ===========================================================================
   # Build Verification Generators
@@ -250,29 +226,31 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        run: go mod download
+        run: make deps
 
       - name: Build generators (Unix)
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows'
         run: make build-generators
 
       - name: Build generators (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          go build -o build/telemetryflow-gen.exe ./cmd/generator
-          go build -o build/telemetryflow-restapi.exe ./cmd/generator-restfulapi
+        if: matrix.os == 'windows'
+        shell: bash
+        run: make ci-build-generators
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
 
       - name: Verify binaries (Unix)
-        if: matrix.os != 'windows-latest'
+        if: matrix.os != 'windows'
         run: |
           ./build/telemetryflow-gen version
           ./build/telemetryflow-restapi version
 
       - name: Verify binaries (Windows)
-        if: matrix.os == 'windows-latest'
+        if: matrix.os == 'windows'
         run: |
-          .\build\telemetryflow-gen.exe version
-          .\build\telemetryflow-restapi.exe version
+          .\dist\telemetryflow-gen-windows-amd64.exe version
+          .\dist\telemetryflow-restapi-windows-amd64.exe version
 
   # ===========================================================================
   # Security Scan
@@ -292,6 +270,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Download dependencies
+        run: make deps
+
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
         with:
@@ -304,9 +285,7 @@ jobs:
           sarif_file: gosec-results.sarif
 
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./... || true
+        run: make govulncheck
 
   # ===========================================================================
   # Coverage Report
@@ -339,19 +318,21 @@ jobs:
           path: coverage/
         continue-on-error: true
 
-      - name: Merge coverage files
+      - name: Prepare coverage files
         run: |
-          go install github.com/wadey/gocovmerge@latest
+          cp coverage/coverage-unit.out coverage-unit.out
           if [ -f coverage/coverage-integration.out ]; then
-            gocovmerge coverage/coverage-unit.out coverage/coverage-integration.out > coverage/coverage-merged.out
-          else
-            cp coverage/coverage-unit.out coverage/coverage-merged.out
+            cp coverage/coverage-integration.out coverage-integration.out
           fi
 
       - name: Generate coverage report
+        run: make coverage-report
+
+      - name: Move coverage files
         run: |
-          go tool cover -func=coverage/coverage-merged.out | tee coverage/coverage-summary.txt
-          go tool cover -html=coverage/coverage-merged.out -o coverage/coverage.html
+          mv coverage-merged.out coverage/coverage-merged.out
+          mv coverage-summary.txt coverage/coverage-summary.txt
+          mv coverage.html coverage/coverage.html
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

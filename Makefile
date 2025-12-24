@@ -337,6 +337,132 @@ docker-push: docker-build
 	@docker push telemetryflow/telemetryflow-go-sdk:$(VERSION)
 	@docker push telemetryflow/telemetryflow-go-sdk:latest
 
+# ===========================================================================
+# CI-Specific Targets
+# ===========================================================================
+# These targets are optimized for CI environments with race detection,
+# coverage output, and atomic mode for accurate coverage in concurrent tests.
+
+.PHONY: fmt-check deps-verify staticcheck test-unit-ci test-integration-ci test-e2e-ci security govulncheck coverage-merge coverage-report ci-build-gen ci-build-restapi ci-lint ci-test ci-build
+
+## CI: Check formatting (fails if code needs formatting)
+fmt-check:
+	@echo "$(GREEN)Checking code formatting...$(NC)"
+	@if [ -n "$$(gofmt -l .)" ]; then \
+		echo "$(RED)The following files need formatting:$(NC)"; \
+		gofmt -l .; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)All files are properly formatted$(NC)"
+
+## CI: Download and verify dependencies
+deps-verify:
+	@echo "$(GREEN)Downloading and verifying dependencies...$(NC)"
+	@$(GOMOD) download
+	@$(GOMOD) verify
+	@echo "$(GREEN)Dependencies verified$(NC)"
+
+## CI: Install and run staticcheck
+staticcheck:
+	@echo "$(GREEN)Running staticcheck...$(NC)"
+	@if ! command -v staticcheck >/dev/null 2>&1; then \
+		echo "$(YELLOW)Installing staticcheck...$(NC)"; \
+		go install honnef.co/go/tools/cmd/staticcheck@latest; \
+	fi
+	@staticcheck ./...
+	@echo "$(GREEN)Staticcheck complete$(NC)"
+
+## CI: Run unit tests with race detection and coverage
+test-unit-ci:
+	@echo "$(GREEN)Running unit tests (CI mode)...$(NC)"
+	@$(GOTEST) -v -race -timeout 5m -coverprofile=coverage-unit.out -covermode=atomic ./tests/unit/...
+	@echo "$(GREEN)Unit tests complete$(NC)"
+
+## CI: Run integration tests with race detection and coverage
+test-integration-ci:
+	@echo "$(GREEN)Running integration tests (CI mode)...$(NC)"
+	@$(MAKE) build-generators
+	@$(GOTEST) -v -race -timeout 10m -coverprofile=coverage-integration.out -covermode=atomic ./tests/integration/...
+	@echo "$(GREEN)Integration tests complete$(NC)"
+
+## CI: Run E2E tests
+test-e2e-ci:
+	@echo "$(GREEN)Running E2E tests (CI mode)...$(NC)"
+	@$(MAKE) build-generators
+	@$(GOTEST) -v -timeout 15m ./tests/e2e/...
+	@echo "$(GREEN)E2E tests complete$(NC)"
+
+## CI: Run security scan with gosec
+security:
+	@echo "$(GREEN)Running security scan...$(NC)"
+	@if ! command -v gosec >/dev/null 2>&1; then \
+		echo "$(YELLOW)Installing gosec...$(NC)"; \
+		go install github.com/securego/gosec/v2/cmd/gosec@latest; \
+	fi
+	@gosec -no-fail -fmt sarif -out gosec-results.sarif ./... || true
+	@echo "$(GREEN)Security scan complete$(NC)"
+
+## CI: Run govulncheck
+govulncheck:
+	@echo "$(GREEN)Running govulncheck...$(NC)"
+	@if ! command -v govulncheck >/dev/null 2>&1; then \
+		echo "$(YELLOW)Installing govulncheck...$(NC)"; \
+		go install golang.org/x/vuln/cmd/govulncheck@latest; \
+	fi
+	@govulncheck ./... || true
+	@echo "$(GREEN)Vulnerability check complete$(NC)"
+
+## CI: Merge coverage files
+coverage-merge:
+	@echo "$(GREEN)Merging coverage files...$(NC)"
+	@if ! command -v gocovmerge >/dev/null 2>&1; then \
+		echo "$(YELLOW)Installing gocovmerge...$(NC)"; \
+		go install github.com/wadey/gocovmerge@latest; \
+	fi
+	@if [ -f coverage-integration.out ]; then \
+		gocovmerge coverage-unit.out coverage-integration.out > coverage-merged.out; \
+	else \
+		cp coverage-unit.out coverage-merged.out; \
+	fi
+	@echo "$(GREEN)Coverage files merged$(NC)"
+
+## CI: Generate coverage report
+coverage-report: coverage-merge
+	@echo "$(GREEN)Generating coverage report...$(NC)"
+	@$(GOCMD) tool cover -func=coverage-merged.out | tee coverage-summary.txt
+	@$(GOCMD) tool cover -html=coverage-merged.out -o coverage.html
+	@echo "$(GREEN)Coverage report generated$(NC)"
+
+## CI: Build telemetryflow-gen for specific platform
+ci-build-gen:
+	@echo "$(GREEN)Building $(GENERATOR_NAME) for $(GOOS)/$(GOARCH)...$(NC)"
+	@mkdir -p $(DIST_DIR)
+	@OUTPUT="$(DIST_DIR)/$(GENERATOR_NAME)-$(GOOS)-$(GOARCH)"; \
+	if [ "$(GOOS)" = "windows" ]; then OUTPUT="$${OUTPUT}.exe"; fi; \
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -ldflags "$(LDFLAGS)" -o $${OUTPUT} $(GENERATOR_PATH)
+	@echo "$(GREEN)Build complete: $(DIST_DIR)/$(GENERATOR_NAME)-$(GOOS)-$(GOARCH)$(NC)"
+
+## CI: Build telemetryflow-restapi for specific platform
+ci-build-restapi:
+	@echo "$(GREEN)Building $(RESTAPI_GENERATOR_NAME) for $(GOOS)/$(GOARCH)...$(NC)"
+	@mkdir -p $(DIST_DIR)
+	@OUTPUT="$(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-$(GOOS)-$(GOARCH)"; \
+	if [ "$(GOOS)" = "windows" ]; then OUTPUT="$${OUTPUT}.exe"; fi; \
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) $(GOBUILD) -ldflags "$(LDFLAGS)" -o $${OUTPUT} $(RESTAPI_GENERATOR_PATH)
+	@echo "$(GREEN)Build complete: $(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-$(GOOS)-$(GOARCH)$(NC)"
+
+## CI: Build both generators for specific platform
+ci-build-generators: ci-build-gen ci-build-restapi
+	@echo "$(GREEN)All generators built for $(GOOS)/$(GOARCH)$(NC)"
+
+## CI: Run full lint suite
+ci-lint: deps-verify fmt-check vet staticcheck
+	@echo "$(GREEN)CI lint suite complete$(NC)"
+
+## CI: Run all tests
+ci-test: test-unit-ci test-integration-ci
+	@echo "$(GREEN)CI test suite complete$(NC)"
+
 ## Version info
 version:
 	@echo "$(GREEN)$(PRODUCT_NAME)$(NC)"

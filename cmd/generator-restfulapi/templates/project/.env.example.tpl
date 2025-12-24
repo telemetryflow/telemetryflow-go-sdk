@@ -37,6 +37,7 @@ JWT_SECRET=your_jwt_secret_here_min_64_chars_recommended
 JWT_REFRESH_SECRET=your_refresh_secret_here_min_64_chars_recommended
 JWT_EXPIRATION=24h
 JWT_REFRESH_EXPIRATION=168h
+SESSION_SECRET=your_session_secret_here_min_64_chars_recommended
 {{- end}}
 
 {{- if .EnableRateLimit}}
