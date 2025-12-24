@@ -197,24 +197,14 @@ func (c *Client) LogError(ctx context.Context, message string, attributes map[st
 
 // ===== TRACES API =====
 
-// StartSpan starts a new trace span
+// StartSpan starts a new trace span and returns the span ID
 func (c *Client) StartSpan(ctx context.Context, name string, kind string, attributes map[string]interface{}) (string, error) {
 	if !c.isInitialized() {
 		return "", fmt.Errorf("client not initialized")
 	}
 
-	cmd := &application.StartSpanCommand{
-		Name:       name,
-		Kind:       kind,
-		Attributes: attributes,
-	}
-
-	if err := c.commandHandler.Handle(ctx, cmd); err != nil {
-		return "", err
-	}
-
-	// In production, return the actual span ID
-	return "span-id-placeholder", nil
+	// Use the direct method that returns the span ID
+	return c.commandHandler.StartSpanDirect(ctx, name, kind, attributes)
 }
 
 // EndSpan ends an active span

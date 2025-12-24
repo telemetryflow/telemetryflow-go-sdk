@@ -510,6 +510,7 @@ Templates support the following helper functions:
 | `replace` | Replace string | `{{replace .Name "-" "_"}}` |
 | `trimSuffix` | Trim suffix | `{{trimSuffix .Name "_id"}}` |
 | `trimPrefix` | Trim prefix | `{{trimPrefix .Name "tbl_"}}` |
+| `add` | Add numbers | `{{add 1 2}}` → `3` |
 
 ## Custom Templates
 
@@ -533,6 +534,7 @@ type TemplateData struct {
     ServiceName    string
     ServiceVersion string
     Environment    string
+    EnvPrefix      string  // Environment variable prefix (e.g., ORDER_SERVICE)
 
     // Database
     DBDriver string

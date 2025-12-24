@@ -297,15 +297,17 @@ func (h *TelemetryCommandHandler) handleEmitLog(ctx context.Context, cmd *applic
 
 // ===== TRACE HANDLERS =====
 
-func (h *TelemetryCommandHandler) handleStartSpan(ctx context.Context, cmd *application.StartSpanCommand) error {
+// StartSpanDirect starts a new span and returns its ID directly
+// This is the preferred method for starting spans as it returns the span ID
+func (h *TelemetryCommandHandler) StartSpanDirect(ctx context.Context, name string, kind string, attributes map[string]interface{}) (string, error) {
 	if !h.initialized || h.tracer == nil {
-		return fmt.Errorf("traces not initialized")
+		return "", fmt.Errorf("traces not initialized")
 	}
 
-	attrs := convertAttributes(cmd.Attributes)
+	attrs := convertAttributes(attributes)
 
 	var spanKind trace.SpanKind
-	switch cmd.Kind {
+	switch kind {
 	case "internal":
 		spanKind = trace.SpanKindInternal
 	case "server":
@@ -320,7 +322,7 @@ func (h *TelemetryCommandHandler) handleStartSpan(ctx context.Context, cmd *appl
 		spanKind = trace.SpanKindInternal
 	}
 
-	_, span := h.tracer.Start(ctx, cmd.Name,
+	_, span := h.tracer.Start(ctx, name,
 		trace.WithSpanKind(spanKind),
 		trace.WithAttributes(attrs...),
 	)
@@ -331,7 +333,12 @@ func (h *TelemetryCommandHandler) handleStartSpan(ctx context.Context, cmd *appl
 	h.activeSpans[spanID] = span
 	h.spansMutex.Unlock()
 
-	return nil
+	return spanID, nil
+}
+
+func (h *TelemetryCommandHandler) handleStartSpan(ctx context.Context, cmd *application.StartSpanCommand) error {
+	_, err := h.StartSpanDirect(ctx, cmd.Name, cmd.Kind, cmd.Attributes)
+	return err
 }
 
 func (h *TelemetryCommandHandler) handleEndSpan(ctx context.Context, cmd *application.EndSpanCommand) error {
