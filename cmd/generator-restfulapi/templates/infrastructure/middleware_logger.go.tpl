@@ -2,21 +2,38 @@
 package middleware
 
 import (
+{{- if .EnableTelemetry}}
+	"fmt"
+{{- end}}
 	"time"
 
 	"github.com/labstack/echo/v4"
 {{- if .EnableTelemetry}}
 	"{{.ModulePath}}/telemetry/logs"
 	"{{.ModulePath}}/telemetry/metrics"
+	"{{.ModulePath}}/telemetry/traces"
 {{- end}}
 )
 
-// Logger returns a logging middleware
+// Logger returns a logging middleware with tracing support
 func Logger() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			start := time.Now()
 			req := c.Request()
+{{- if .EnableTelemetry}}
+			ctx := req.Context()
+
+			// Start trace span for this request
+			spanID, _ := traces.StartSpan(ctx, fmt.Sprintf("HTTP %s %s", req.Method, req.URL.Path), map[string]interface{}{
+				"http.method":      req.Method,
+				"http.url":         req.URL.String(),
+				"http.path":        req.URL.Path,
+				"http.user_agent":  req.UserAgent(),
+				"http.remote_addr": c.RealIP(),
+				"http.request_id":  c.Response().Header().Get(echo.HeaderXRequestID),
+			})
+{{- end}}
 
 			// Process request
 			err := next(c)
@@ -39,6 +56,13 @@ func Logger() echo.MiddlewareFunc {
 				"user_agent": req.UserAgent(),
 				"remote_ip":  c.RealIP(),
 			})
+
+			// End trace span
+			var spanErr error
+			if res.Status >= 500 {
+				spanErr = fmt.Errorf("HTTP %d", res.Status)
+			}
+			traces.EndSpan(ctx, spanID, spanErr)
 {{- end}}
 
 			return err

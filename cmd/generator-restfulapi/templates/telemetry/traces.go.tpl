@@ -7,20 +7,36 @@ import (
 	"{{.ModulePath}}/telemetry"
 )
 
-// StartSpan starts a new trace span
+// StartSpan starts a new trace span with server kind (for HTTP handlers)
 func StartSpan(ctx context.Context, name string, attrs map[string]interface{}) (string, error) {
+	if !telemetry.IsEnabled() {
+		return "", nil
+	}
+	return telemetry.Client().StartSpan(ctx, name, "server", attrs)
+}
+
+// StartInternalSpan starts a new internal span (for internal operations)
+func StartInternalSpan(ctx context.Context, name string, attrs map[string]interface{}) (string, error) {
 	if !telemetry.IsEnabled() {
 		return "", nil
 	}
 	return telemetry.Client().StartSpan(ctx, name, "internal", attrs)
 }
 
+// StartClientSpan starts a new client span (for outgoing requests)
+func StartClientSpan(ctx context.Context, name string, attrs map[string]interface{}) (string, error) {
+	if !telemetry.IsEnabled() {
+		return "", nil
+	}
+	return telemetry.Client().StartSpan(ctx, name, "client", attrs)
+}
+
 // EndSpan ends an active span
-func EndSpan(ctx context.Context, spanID string, err error) error {
+func EndSpan(ctx context.Context, spanID string, spanErr error) error {
 	if !telemetry.IsEnabled() || spanID == "" {
 		return nil
 	}
-	return telemetry.Client().EndSpan(ctx, spanID, err)
+	return telemetry.Client().EndSpan(ctx, spanID, spanErr)
 }
 
 // AddEvent adds an event to the current span

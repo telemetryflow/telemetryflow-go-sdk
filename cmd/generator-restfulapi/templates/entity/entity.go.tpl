@@ -2,7 +2,15 @@
 package entity
 
 import (
+{{- $hasTime := false}}
+{{- range .EntityFields}}
+{{- if eq .GoType "time.Time"}}
+{{- $hasTime = true}}
+{{- end}}
+{{- end}}
+{{- if $hasTime}}
 	"time"
+{{- end}}
 
 	"github.com/google/uuid"
 )

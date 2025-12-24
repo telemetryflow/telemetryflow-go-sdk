@@ -25,8 +25,12 @@ func Init() error {
 		return nil
 	}
 
+	// Check if insecure mode is enabled (for local development)
+	insecure := os.Getenv("TELEMETRYFLOW_INSECURE") == "true"
+
 	client, err = telemetryflow.NewBuilder().
 		WithAutoConfiguration().
+		WithInsecure(insecure).
 		WithSignals(true, true, true).
 		Build()
 	if err != nil {

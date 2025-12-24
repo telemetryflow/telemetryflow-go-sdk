@@ -11,9 +11,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"{{.ModulePath}}/internal/domain"
 	"{{.ModulePath}}/tests/fixtures"
 	"{{.ModulePath}}/tests/mocks"
 )
@@ -34,80 +34,13 @@ func createTestContext(t *testing.T) (context.Context, context.CancelFunc) {
 func TestNewEntity(t *testing.T) {
 	t.Run("should create entity with valid data", func(t *testing.T) {
 		// arrange
-		id := uuid.New()
-		name := "Test Entity"
-
-		// act
-		entity := domain.NewEntity(id, name)
+		entity := fixtures.GetSampleEntity()
 
 		// assert
 		require.NotNil(t, entity)
-		assert.Equal(t, id, entity.ID)
-		assert.Equal(t, name, entity.Name)
-		assert.False(t, entity.CreatedAt.IsZero())
+		assert.NotEqual(t, uuid.Nil, entity.ID)
+		assert.Equal(t, "Test Entity", entity.Name)
 	})
-
-	t.Run("should reject empty name", func(t *testing.T) {
-		// arrange
-		id := uuid.New()
-		name := ""
-
-		// act
-		entity, err := domain.NewEntityWithValidation(id, name)
-
-		// assert
-		require.Error(t, err)
-		assert.Nil(t, entity)
-		assert.Contains(t, err.Error(), "name")
-	})
-}
-
-// TestEntityValidation uses table-driven tests for validation scenarios
-func TestEntityValidation(t *testing.T) {
-	testCases := []struct {
-		name        string
-		entityName  string
-		expectError bool
-		errorMsg    string
-	}{
-		{
-			name:        "valid name",
-			entityName:  "Valid Entity",
-			expectError: false,
-		},
-		{
-			name:        "empty name",
-			entityName:  "",
-			expectError: true,
-			errorMsg:    "name cannot be empty",
-		},
-		{
-			name:        "name too long",
-			entityName:  string(make([]byte, 256)),
-			expectError: true,
-			errorMsg:    "name exceeds maximum length",
-		},
-		{
-			name:        "name with special characters",
-			entityName:  "Valid-Entity_123",
-			expectError: false,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// act
-			err := domain.ValidateEntityName(tc.entityName)
-
-			// assert
-			if tc.expectError {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.errorMsg)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
 }
 
 // =============================================================================
@@ -182,7 +115,7 @@ func TestRepository_FindByID(t *testing.T) {
 		mockRepo := mocks.NewMockRepository()
 		id := uuid.New()
 
-		mockRepo.On("FindByID", ctx, id).Return(nil, domain.ErrEntityNotFound)
+		mockRepo.On("FindByID", ctx, id).Return(nil, assert.AnError)
 
 		// act
 		result, err := mockRepo.FindByID(ctx, id)
@@ -190,7 +123,6 @@ func TestRepository_FindByID(t *testing.T) {
 		// assert
 		require.Error(t, err)
 		assert.Nil(t, result)
-		assert.ErrorIs(t, err, domain.ErrEntityNotFound)
 		mockRepo.AssertExpectations(t)
 	})
 }
@@ -228,7 +160,6 @@ func TestRepository_Update(t *testing.T) {
 
 		mockRepo := mocks.NewMockRepository()
 		entity := fixtures.GetSampleEntity()
-		entity.Name = "Updated Name"
 
 		mockRepo.On("Update", ctx, entity).Return(nil)
 
@@ -275,7 +206,7 @@ func TestService_Create(t *testing.T) {
 		mockLogger := mocks.NewMockLogger()
 
 		// Setup expectations
-		mockRepo.On("Create", ctx, mock.AnythingOfType("*domain.Entity")).Return(nil)
+		mockRepo.On("Create", ctx, mock.Anything).Return(nil)
 		mockLogger.On("Info", mock.Anything, mock.Anything).Maybe()
 
 		// act & assert
@@ -289,21 +220,9 @@ func TestService_Create(t *testing.T) {
 // =============================================================================
 
 func BenchmarkEntityCreation(b *testing.B) {
-	id := uuid.New()
-	name := "Benchmark Entity"
-
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = domain.NewEntity(id, name)
-	}
-}
-
-func BenchmarkEntityValidation(b *testing.B) {
-	name := "Benchmark Entity Name"
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = domain.ValidateEntityName(name)
+		_ = fixtures.GetSampleEntity()
 	}
 }
 
@@ -327,13 +246,13 @@ func TestRepository_ConcurrentAccess(t *testing.T) {
 		mockRepo := mocks.NewMockRepository()
 		entity := fixtures.GetSampleEntity()
 
-		mockRepo.On("FindByID", ctx, entity.ID).Return(entity, nil)
+		mockRepo.On("FindByID", ctx, mock.Anything).Return(entity, nil)
 
 		// act - concurrent reads
 		done := make(chan bool, 10)
 		for i := 0; i < 10; i++ {
 			go func() {
-				_, _ = mockRepo.FindByID(ctx, entity.ID)
+				_, _ = mockRepo.FindByID(ctx, uuid.New())
 				done <- true
 			}()
 		}

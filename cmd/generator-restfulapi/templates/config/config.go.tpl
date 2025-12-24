@@ -2,8 +2,10 @@
 package config
 
 import (
+	"log"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
@@ -83,6 +85,11 @@ type LogConfig struct {
 
 // Load loads configuration from environment and config file
 func Load() (*Config, error) {
+	// Load .env file if it exists (ignore error if not found)
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables")
+	}
+
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./configs")

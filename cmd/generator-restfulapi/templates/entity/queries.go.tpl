@@ -48,3 +48,38 @@ func (q *List{{.EntityNamePlural | pascal}}Query) Validate() error {
 func (q *List{{.EntityNamePlural | pascal}}Query) Offset() int {
 	return (q.Page - 1) * q.PageSize
 }
+
+// GetAll{{.EntityNamePlural}}Query represents the get all {{.EntityNamePlural}} query with pagination
+type GetAll{{.EntityNamePlural}}Query struct {
+	Offset int `json:"offset" query:"offset"`
+	Limit  int `json:"limit" query:"limit"`
+}
+
+// Validate validates the query
+func (q *GetAll{{.EntityNamePlural}}Query) Validate() error {
+	if q.Offset < 0 {
+		q.Offset = 0
+	}
+	if q.Limit < 1 || q.Limit > 100 {
+		q.Limit = 10
+	}
+	return nil
+}
+
+// Search{{.EntityNamePlural}}Query represents the search {{.EntityNamePlural}} query
+type Search{{.EntityNamePlural}}Query struct {
+	Query  string `json:"query" query:"query"`
+	Offset int    `json:"offset" query:"offset"`
+	Limit  int    `json:"limit" query:"limit"`
+}
+
+// Validate validates the query
+func (q *Search{{.EntityNamePlural}}Query) Validate() error {
+	if q.Offset < 0 {
+		q.Offset = 0
+	}
+	if q.Limit < 1 || q.Limit > 100 {
+		q.Limit = 10
+	}
+	return nil
+}

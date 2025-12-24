@@ -171,6 +171,7 @@ type TemplateData struct {
 	ServiceName    string
 	ServiceVersion string
 	Environment    string
+	EnvPrefix      string
 
 	// Database
 	DBDriver string
@@ -220,12 +221,16 @@ func newTemplateData() TemplateData {
 		modulePath = fmt.Sprintf("github.com/example/%s", strings.ToLower(projectName))
 	}
 
+	// Generate environment prefix from project name
+	envPrefix := strings.ToUpper(strings.ReplaceAll(projectName, "-", "_"))
+
 	return TemplateData{
 		ProjectName:     projectName,
 		ModulePath:      modulePath,
 		ServiceName:     serviceName,
 		ServiceVersion:  serviceVersion,
 		Environment:     environment,
+		EnvPrefix:       envPrefix,
 		DBDriver:        dbDriver,
 		DBHost:          dbHost,
 		DBPort:          dbPort,
@@ -372,6 +377,7 @@ func runNew(cmd *cobra.Command, args []string) {
 	generateFromTemplate("tests/integration_test.go.tpl", data, filepath.Join(projectRoot, "tests", "integration", "api_test.go"))
 	generateFromTemplate("tests/e2e_test.go.tpl", data, filepath.Join(projectRoot, "tests", "e2e", "e2e_test.go"))
 	generateFromTemplate("tests/mocks.go.tpl", data, filepath.Join(projectRoot, "tests", "mocks", "mocks.go"))
+	generateFromTemplate("tests/fixtures.go.tpl", data, filepath.Join(projectRoot, "tests", "fixtures", "fixtures.go"))
 
 	fmt.Println("\n" + strings.Repeat("=", 60))
 	fmt.Println("Project created successfully!")
@@ -394,6 +400,18 @@ func runNew(cmd *cobra.Command, args []string) {
 
 func runEntity(cmd *cobra.Command, args []string) {
 	fmt.Printf("Adding entity: %s\n", entityName)
+
+	// Use the module path from the existing go.mod file
+	goModPath := filepath.Join(outputDir, "go.mod")
+	if content, err := os.ReadFile(goModPath); err == nil {
+		lines := strings.Split(string(content), "\n")
+		for _, line := range lines {
+			if strings.HasPrefix(line, "module ") {
+				modulePath = strings.TrimSpace(strings.TrimPrefix(line, "module"))
+				break
+			}
+		}
+	}
 
 	data := newTemplateData()
 	data.EntityName = toPascalCase(entityName)
@@ -495,6 +513,7 @@ func loadTemplate(name string) (*template.Template, error) {
 		"replace":    strings.ReplaceAll,
 		"trimSuffix": strings.TrimSuffix,
 		"trimPrefix": strings.TrimPrefix,
+		"add":        func(a, b int) int { return a + b },
 	}
 
 	if templateDir != "" {
