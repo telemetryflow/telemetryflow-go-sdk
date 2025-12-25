@@ -191,37 +191,39 @@ func runConfig(cmd *cobra.Command, args []string) {
 
 // TemplateData holds all data passed to templates
 type TemplateData struct {
-	ProjectName   string
-	ModulePath    string
-	ServiceName   string
-	Environment   string
-	EnableMetrics bool
-	EnableLogs    bool
-	EnableTraces  bool
-	APIKeyID      string
-	APIKeySecret  string
-	Endpoint      string
-	Port          string
-	NumWorkers    int
-	QueueSize     int
+	ProjectName    string
+	ModulePath     string
+	ServiceName    string
+	ServiceVersion string
+	Environment    string
+	EnableMetrics  bool
+	EnableLogs     bool
+	EnableTraces   bool
+	APIKeyID       string
+	APIKeySecret   string
+	Endpoint       string
+	Port           string
+	NumWorkers     int
+	QueueSize      int
 }
 
 // newTemplateData creates a new TemplateData with current configuration
 func newTemplateData() TemplateData {
 	return TemplateData{
-		ProjectName:   projectName,
-		ModulePath:    getModulePath(),
-		ServiceName:   serviceName,
-		Environment:   "production",
-		EnableMetrics: enableMetrics,
-		EnableLogs:    enableLogs,
-		EnableTraces:  enableTraces,
-		APIKeyID:      apiKeyID,
-		APIKeySecret:  apiKeySecret,
-		Endpoint:      endpoint,
-		Port:          "8080",
-		NumWorkers:    5,
-		QueueSize:     100,
+		ProjectName:    projectName,
+		ModulePath:     getModulePath(),
+		ServiceName:    serviceName,
+		ServiceVersion: "1.0.0",
+		Environment:    "production",
+		EnableMetrics:  enableMetrics,
+		EnableLogs:     enableLogs,
+		EnableTraces:   enableTraces,
+		APIKeyID:       apiKeyID,
+		APIKeySecret:   apiKeySecret,
+		Endpoint:       endpoint,
+		Port:           "8080",
+		NumWorkers:     5,
+		QueueSize:      100,
 	}
 }
 
