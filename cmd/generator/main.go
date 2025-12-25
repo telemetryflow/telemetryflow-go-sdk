@@ -89,6 +89,9 @@ func main() {
 	configCmd.Flags().StringVarP(&serviceName, "service", "n", "", "Service name")
 	configCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory")
 
+	// Example command flags
+	exampleCmd.Flags().StringVarP(&outputDir, "output", "o", ".", "Output directory")
+
 	// Version command
 	var versionCmd = &cobra.Command{
 		Use:   "version",
