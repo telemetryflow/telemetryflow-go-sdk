@@ -14,6 +14,10 @@
 # - macOS: amd64 (Intel), arm64 (Apple Silicon)
 # - Windows: amd64
 #
+# Triggers:
+# - Push tags matching v*.*.*
+# - Manual workflow dispatch
+#
 # =============================================================================
 
 name: Release
@@ -409,7 +413,7 @@ jobs:
 
             ---
 
-            :books: [Documentation](https://docs.telemetryflow.id) | :bug: [Report Issues](https://github.com/telemetryflow/telemetryflow-go-sdk/issues)
+            📚 [Documentation](https://docs.telemetryflow.id) | 🐛 [Report Issues](https://github.com/telemetryflow/telemetryflow-go-sdk/issues)
 
   # ===========================================================================
   # Summary
