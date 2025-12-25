@@ -7,7 +7,6 @@ package handler
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"{{.ModulePath}}/internal/application/dto"
 	"{{.ModulePath}}/internal/application/query"
 	"{{.ModulePath}}/internal/domain/repository"
@@ -26,8 +25,8 @@ func New{{.EntityName}}QueryHandler(repo repository.{{.EntityName}}Repository) *
 }
 
 // Handle{{.EntityName}}GetByID handles get {{lower .EntityName}} by ID query
-func (h *{{.EntityName}}QueryHandler) Handle{{.EntityName}}GetByID(ctx context.Context, id uuid.UUID) (*dto.{{.EntityName}}Response, error) {
-	entity, err := h.repo.FindByID(ctx, id)
+func (h *{{.EntityName}}QueryHandler) Handle{{.EntityName}}GetByID(ctx context.Context, qry *query.Get{{.EntityName}}ByIDQuery) (*dto.{{.EntityName}}Response, error) {
+	entity, err := h.repo.FindByID(ctx, qry.ID)
 	if err != nil {
 		return nil, err
 	}

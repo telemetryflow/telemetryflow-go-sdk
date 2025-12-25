@@ -174,12 +174,15 @@ services:
   otel-collector:
     profiles: ["monitoring", "all"]
     platform: linux/amd64
-    image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-latest}
+    # OTEL Collector Community Contributor
+    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-latest}
+    # TelemetryFlow Collector (TFO-Collector)
+    image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
     container_name: ${CONTAINER_OTEL:-{{.ProjectName | lower}}_otel}
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
-      - ./config/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./configs/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
       - "${PORT_OTEL_GRPC:-4317}:4317"     # OTLP gRPC
       - "${PORT_OTEL_HTTP:-4318}:4318"     # OTLP HTTP

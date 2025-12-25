@@ -2,7 +2,6 @@
 package http
 
 import (
-	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"{{.ModulePath}}/internal/infrastructure/http/handler"
 	"{{.ModulePath}}/internal/infrastructure/http/middleware"

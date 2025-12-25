@@ -1,15 +1,26 @@
-#================================================================================================
-# OpenTelemetry Collector Configuration
-# {{.ProjectName}} - Traces, Metrics, and Logs
-#================================================================================================
+# OpenTelemetry Collector Configuration (OCB Build)
+# {{.ProjectName}} - Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 {{.ProjectName}}. All rights reserved.
+#
+# This config is for the OCB (OpenTelemetry Collector Builder) build.
+# Use with: ./build/tfo-collector --config configs/otel/ocb-collector.yaml
+#
+# For the standalone build, use: configs/otel/tfo-collector.yaml
 
 receivers:
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: "0.0.0.0:4317"
+        max_recv_msg_size_mib: 4
+        max_concurrent_streams: 100
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            - "*"
+          allowed_headers:
+            - "*"
 
 processors:
   batch:
@@ -19,8 +30,8 @@ processors:
 
   memory_limiter:
     check_interval: 1s
-    limit_mib: 512
-    spike_limit_mib: 128
+    limit_percentage: 80
+    spike_limit_percentage: 25
 
   resource:
     attributes:
@@ -42,7 +53,7 @@ exporters:
     const_labels:
       environment: development
 
-  # OTLP exporter (for forwarding to external collectors like TelemetryFlow, etc.)
+  # OTLP exporter (for forwarding to external collectors like Jaeger, TelemetryFlow, etc.)
   # otlp:
   #   endpoint: "your-collector-endpoint:4317"
   #   tls:
@@ -56,20 +67,18 @@ exporters:
 
 extensions:
   health_check:
-    endpoint: 0.0.0.0:13133
+    endpoint: "0.0.0.0:13133"
 
   zpages:
-    endpoint: 0.0.0.0:55679
+    endpoint: "0.0.0.0:55679"
+
+  pprof:
+    endpoint: "0.0.0.0:1777"
 
 service:
-  extensions: [health_check, zpages]
+  extensions: [health_check, zpages, pprof]
 
   pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch, resource]
-      exporters: [debug, otlp/jaeger]
-
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
@@ -80,9 +89,16 @@ service:
       processors: [memory_limiter, batch, resource]
       exporters: [debug]
 
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug, otlp/jaeger]
+
   telemetry:
     logs:
       level: info
+      encoding: json
+
     metrics:
       level: detailed
       readers:

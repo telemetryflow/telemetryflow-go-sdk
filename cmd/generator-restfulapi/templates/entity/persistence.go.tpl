@@ -96,7 +96,7 @@ func (r *{{lower .EntityName}}Repository) FindAll(ctx context.Context, offset, l
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var {{lower .EntityNamePlural}} []entity.{{.EntityName}}
 	for rows.Next() {
@@ -163,7 +163,7 @@ func (r *{{lower $.EntityName}}Repository) FindBy{{.Name}}(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var {{lower $.EntityNamePlural}} []entity.{{$.EntityName}}
 	for rows.Next() {
