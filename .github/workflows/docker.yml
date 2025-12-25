@@ -230,9 +230,11 @@ jobs:
           # =============================================================================
           # Final image
           # =============================================================================
-          FROM alpine:3.19
+          FROM alpine:3.21
 
-          RUN apk add --no-cache ca-certificates tzdata
+          # Update packages to get security patches (CVE fixes)
+          RUN apk upgrade --no-cache && \
+              apk add --no-cache ca-certificates tzdata
 
           COPY --from=builder /bin/telemetryflow-gen /usr/local/bin/
           COPY --from=builder /bin/telemetryflow-restapi /usr/local/bin/
@@ -336,7 +338,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'

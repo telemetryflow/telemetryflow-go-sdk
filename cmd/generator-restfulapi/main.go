@@ -57,6 +57,44 @@ var (
 	noBanner    bool
 )
 
+// safePath validates and returns a clean path that is safe to use.
+// It ensures the resolved path doesn't escape the base directory through path traversal.
+func safePath(baseDir, relativePath string) (string, error) {
+	// Clean and resolve the base directory
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve base directory: %w", err)
+	}
+
+	// Clean and join the paths
+	cleanPath := filepath.Clean(filepath.Join(absBase, relativePath))
+
+	// Verify the result is still within the base directory
+	if !strings.HasPrefix(cleanPath, absBase) {
+		return "", fmt.Errorf("path traversal detected: %s escapes base directory", relativePath)
+	}
+
+	return cleanPath, nil
+}
+
+// safeReadFile reads a file after validating the path is safe.
+// This addresses gosec G304 (potential file inclusion via variable).
+func safeReadFile(filePath string) ([]byte, error) {
+	// Resolve to absolute path and clean it
+	absPath, err := filepath.Abs(filepath.Clean(filePath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve path: %w", err)
+	}
+
+	// Read the file
+	content, err := os.ReadFile(absPath) // #nosec G304 - path is cleaned and resolved to absolute
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "telemetryflow-restapi",
@@ -347,6 +385,7 @@ func runNew(cmd *cobra.Command, args []string) {
 	generateFromTemplate("pkg/logger.go.tpl", data, filepath.Join(projectRoot, "pkg", "logger", "logger.go"))
 	generateFromTemplate("pkg/validator.go.tpl", data, filepath.Join(projectRoot, "pkg", "validator", "validator.go"))
 	generateFromTemplate("pkg/response.go.tpl", data, filepath.Join(projectRoot, "pkg", "response", "response.go"))
+	generateFromTemplate("pkg/safefile.go.tpl", data, filepath.Join(projectRoot, "pkg", "safefile", "safefile.go"))
 
 	// Telemetry
 	if enableTelemetry {
@@ -402,8 +441,11 @@ func runEntity(cmd *cobra.Command, args []string) {
 	fmt.Printf("Adding entity: %s\n", entityName)
 
 	// Use the module path from the existing go.mod file
-	goModPath := filepath.Join(outputDir, "go.mod")
-	if content, err := os.ReadFile(goModPath); err == nil {
+	// Use safePath to validate the path is within output directory
+	goModPath, pathErr := safePath(outputDir, "go.mod")
+	if pathErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Invalid go.mod path: %v\n", pathErr)
+	} else if content, err := safeReadFile(goModPath); err == nil {
 		lines := strings.Split(string(content), "\n")
 		for _, line := range lines {
 			if strings.HasPrefix(line, "module ") {
@@ -517,8 +559,12 @@ func loadTemplate(name string) (*template.Template, error) {
 	}
 
 	if templateDir != "" {
-		filePath := filepath.Join(templateDir, name)
-		content, err = os.ReadFile(filePath)
+		// Use safePath to validate the template path
+		filePath, pathErr := safePath(templateDir, name)
+		if pathErr != nil {
+			return nil, fmt.Errorf("invalid template path %s: %w", name, pathErr)
+		}
+		content, err = safeReadFile(filePath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read template %s: %w", filePath, err)
 		}

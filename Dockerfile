@@ -70,7 +70,7 @@ RUN /telemetryflow-gen version && /telemetryflow-restapi version
 # -----------------------------------------------------------------------------
 # Stage 2: Runtime
 # -----------------------------------------------------------------------------
-FROM alpine:3.23
+FROM alpine:3.21
 
 # =============================================================================
 # TelemetryFlow Metadata Labels (OCI Image Spec)
