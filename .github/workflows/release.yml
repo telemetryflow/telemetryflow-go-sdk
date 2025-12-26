@@ -10,9 +10,9 @@
 # - telemetryflow-restapi: RESTful API generator (DDD + CQRS)
 #
 # Platforms:
-# - Linux: amd64, arm64
-# - macOS: amd64 (Intel), arm64 (Apple Silicon)
-# - Windows: amd64
+# - Linux: RPM (RHEL/CentOS/Fedora), DEB (Debian/Ubuntu), tar.gz
+# - Windows: ZIP with installer script
+# - macOS: DMG (Intel and Apple Silicon), tar.gz
 #
 # Triggers:
 # - Push tags matching v*.*.*
@@ -191,12 +191,463 @@ jobs:
           retention-days: 1
 
   # ===========================================================================
-  # Package Release Assets
+  # Package RPM
   # ===========================================================================
-  package:
-    name: Package (${{ matrix.os }}-${{ matrix.arch }})
+  package-rpm:
+    name: Package RPM (${{ matrix.arch }})
     runs-on: ubuntu-latest
-    needs: [prepare, build-linux, build-macos, build-windows]
+    needs: [prepare, build-linux]
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            rpm_arch: x86_64
+          - arch: arm64
+            rpm_arch: aarch64
+    steps:
+      - name: Install RPM build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: dist
+
+      - name: Create RPM structure
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          mkdir -p rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+          mkdir -p rpmbuild/SOURCES/telemetryflow-sdk-${VERSION}
+
+          # Copy binaries
+          cp dist/telemetryflow-gen-linux-${{ matrix.arch }} \
+             rpmbuild/SOURCES/telemetryflow-sdk-${VERSION}/telemetryflow-gen
+          cp dist/telemetryflow-restapi-linux-${{ matrix.arch }} \
+             rpmbuild/SOURCES/telemetryflow-sdk-${VERSION}/telemetryflow-restapi
+          chmod +x rpmbuild/SOURCES/telemetryflow-sdk-${VERSION}/telemetryflow-*
+
+          # Create tarball
+          cd rpmbuild/SOURCES
+          tar czf telemetryflow-sdk-${VERSION}.tar.gz telemetryflow-sdk-${VERSION}
+
+      - name: Create RPM spec file
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          CHANGELOG_DATE=$(date '+%a %b %d %Y')
+
+          cat > rpmbuild/SPECS/telemetryflow-sdk.spec << EOF
+          Name:           telemetryflow-sdk
+          Version:        ${{ needs.prepare.outputs.version }}
+          Release:        1%{?dist}
+          Summary:        ${{ env.DESCRIPTION }}
+          License:        ${{ env.LICENSE }}
+          URL:            ${{ env.HOMEPAGE }}
+          Source0:        %{name}-%{version}.tar.gz
+
+          %description
+          ${{ env.PRODUCT_NAME }} provides code generators for TelemetryFlow integration:
+          - telemetryflow-gen: SDK code generator for TelemetryFlow integration
+          - telemetryflow-restapi: DDD + CQRS RESTful API generator with Echo framework
+
+          %prep
+          %setup -q
+
+          %install
+          mkdir -p %{buildroot}/usr/local/bin
+
+          install -m 755 telemetryflow-gen %{buildroot}/usr/local/bin/
+          install -m 755 telemetryflow-restapi %{buildroot}/usr/local/bin/
+
+          %files
+          %defattr(-,root,root,-)
+          /usr/local/bin/telemetryflow-gen
+          /usr/local/bin/telemetryflow-restapi
+
+          %changelog
+          * ${CHANGELOG_DATE} ${{ env.VENDOR }} <${{ env.MAINTAINER }}> - ${{ needs.prepare.outputs.version }}-1
+          - Release version ${{ needs.prepare.outputs.version }}
+          EOF
+
+      - name: Build RPM
+        run: |
+          rpmbuild --define "_topdir $(pwd)/rpmbuild" \
+                   --target ${{ matrix.rpm_arch }} \
+                   -bb rpmbuild/SPECS/telemetryflow-sdk.spec
+
+      - name: Upload RPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-${{ matrix.arch }}
+          path: rpmbuild/RPMS/**/*.rpm
+          retention-days: 1
+
+  # ===========================================================================
+  # Package DEB
+  # ===========================================================================
+  package-deb:
+    name: Package DEB (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: [prepare, build-linux]
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-${{ matrix.arch }}
+          path: dist
+
+      - name: Create DEB structure
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_DIR=telemetryflow-sdk_${VERSION}_${{ matrix.arch }}
+          mkdir -p ${PKG_DIR}/DEBIAN
+          mkdir -p ${PKG_DIR}/usr/local/bin
+
+          # Copy binaries
+          cp dist/telemetryflow-gen-linux-${{ matrix.arch }} \
+             ${PKG_DIR}/usr/local/bin/telemetryflow-gen
+          cp dist/telemetryflow-restapi-linux-${{ matrix.arch }} \
+             ${PKG_DIR}/usr/local/bin/telemetryflow-restapi
+          chmod 755 ${PKG_DIR}/usr/local/bin/telemetryflow-*
+
+      - name: Create DEB control files
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_DIR=telemetryflow-sdk_${VERSION}_${{ matrix.arch }}
+
+          # Control file
+          cat > ${PKG_DIR}/DEBIAN/control << EOF
+          Package: telemetryflow-sdk
+          Version: ${VERSION}
+          Section: devel
+          Priority: optional
+          Architecture: ${{ matrix.arch }}
+          Maintainer: ${{ env.VENDOR }} <${{ env.MAINTAINER }}>
+          Description: ${{ env.DESCRIPTION }}
+           ${{ env.PRODUCT_NAME }} provides code generators for TelemetryFlow integration:
+           - telemetryflow-gen: SDK code generator for TelemetryFlow integration
+           - telemetryflow-restapi: DDD + CQRS RESTful API generator with Echo framework
+          Homepage: ${{ env.HOMEPAGE }}
+          EOF
+
+          # Post-install script
+          cat > ${PKG_DIR}/DEBIAN/postinst << 'EOF'
+          #!/bin/bash
+          set -e
+          echo "TelemetryFlow SDK installed successfully!"
+          echo ""
+          echo "Available commands:"
+          echo "  telemetryflow-gen     - SDK code generator"
+          echo "  telemetryflow-restapi - RESTful API generator"
+          echo ""
+          echo "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
+          exit 0
+          EOF
+          chmod 755 ${PKG_DIR}/DEBIAN/postinst
+
+      - name: Build DEB package
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_DIR=telemetryflow-sdk_${VERSION}_${{ matrix.arch }}
+          dpkg-deb --build ${PKG_DIR}
+          mkdir -p packages
+          mv ${PKG_DIR}.deb packages/
+
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ matrix.arch }}
+          path: packages/*.deb
+          retention-days: 1
+
+  # ===========================================================================
+  # Package Windows ZIP with Installer
+  # ===========================================================================
+  package-windows:
+    name: Package Windows ZIP
+    runs-on: ubuntu-latest
+    needs: [prepare, build-windows]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-windows-amd64
+          path: dist
+
+      - name: Create Windows package
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          PKG_DIR=telemetryflow-sdk-${VERSION}-windows-amd64
+          mkdir -p ${PKG_DIR}
+
+          # Copy binaries
+          cp dist/telemetryflow-gen-windows-amd64.exe ${PKG_DIR}/telemetryflow-gen.exe
+          cp dist/telemetryflow-restapi-windows-amd64.exe ${PKG_DIR}/telemetryflow-restapi.exe
+
+          # Copy docs
+          cp README.md "${PKG_DIR}/" 2>/dev/null || true
+          cp LICENSE "${PKG_DIR}/" 2>/dev/null || true
+
+          # Create install script
+          cat > ${PKG_DIR}/install.ps1 << 'EOF'
+          # TelemetryFlow SDK - Windows Installer
+          # Run as Administrator
+
+          $ErrorActionPreference = "Stop"
+
+          $InstallDir = "C:\Program Files\TelemetryFlow\SDK"
+
+          Write-Host "Installing TelemetryFlow SDK generators..." -ForegroundColor Green
+
+          # Create directory
+          New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+
+          # Copy binaries
+          Copy-Item -Path ".\telemetryflow-gen.exe" -Destination "$InstallDir\" -Force
+          Copy-Item -Path ".\telemetryflow-restapi.exe" -Destination "$InstallDir\" -Force
+
+          # Add to PATH
+          $envPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+          if ($envPath -notlike "*$InstallDir*") {
+              [Environment]::SetEnvironmentVariable("Path", "$envPath;$InstallDir", "Machine")
+              Write-Host "Added $InstallDir to system PATH" -ForegroundColor Yellow
+          }
+
+          Write-Host ""
+          Write-Host "TelemetryFlow SDK installed successfully!" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "Available commands:" -ForegroundColor Cyan
+          Write-Host "  telemetryflow-gen     - SDK code generator"
+          Write-Host "  telemetryflow-restapi - RESTful API generator"
+          Write-Host ""
+          Write-Host "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
+          Write-Host ""
+          Write-Host "NOTE: Restart your terminal to use the commands." -ForegroundColor Yellow
+          EOF
+
+          # Create uninstall script
+          cat > ${PKG_DIR}/uninstall.ps1 << 'EOF'
+          # TelemetryFlow SDK - Windows Uninstaller
+          # Run as Administrator
+
+          $ErrorActionPreference = "Stop"
+
+          $InstallDir = "C:\Program Files\TelemetryFlow\SDK"
+
+          Write-Host "Uninstalling TelemetryFlow SDK..." -ForegroundColor Yellow
+
+          # Remove from PATH
+          $envPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+          $newPath = ($envPath.Split(';') | Where-Object { $_ -ne $InstallDir }) -join ';'
+          [Environment]::SetEnvironmentVariable("Path", $newPath, "Machine")
+
+          # Remove files
+          Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+
+          Write-Host "TelemetryFlow SDK uninstalled successfully!" -ForegroundColor Green
+          EOF
+
+          # Create README
+          cat > ${PKG_DIR}/README.txt << EOF
+          TelemetryFlow SDK v${VERSION}
+          ================================
+
+          Installation:
+          1. Run PowerShell as Administrator
+          2. Navigate to this directory
+          3. Run: .\install.ps1
+
+          Available Commands:
+          - telemetryflow-gen.exe     - SDK code generator
+          - telemetryflow-restapi.exe - RESTful API generator
+
+          Usage:
+          telemetryflow-gen init --project myapp --service my-service
+          telemetryflow-restapi new --name my-api --module github.com/example/my-api
+
+          Documentation: https://docs.telemetryflow.id
+          Support: support@telemetryflow.id
+
+          Copyright (c) 2024-2026 DevOpsCorner Indonesia
+          EOF
+
+          # Create ZIP
+          zip -r telemetryflow-sdk-${VERSION}-windows-amd64.zip ${PKG_DIR}
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: telemetryflow-sdk-*.zip
+          retention-days: 1
+
+  # ===========================================================================
+  # Package macOS DMG
+  # ===========================================================================
+  package-macos:
+    name: Package macOS DMG (${{ matrix.arch }})
+    runs-on: macos-latest
+    needs: [prepare, build-macos]
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            macos_arch: x86_64
+            display_name: Intel
+          - arch: arm64
+            macos_arch: arm64
+            display_name: Apple Silicon
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-darwin-${{ matrix.arch }}
+          path: dist
+
+      - name: Create DMG structure
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          DMG_DIR="dmg-contents"
+          mkdir -p "${DMG_DIR}"
+
+          # Copy binaries
+          cp dist/telemetryflow-gen-darwin-${{ matrix.arch }} "${DMG_DIR}/telemetryflow-gen"
+          cp dist/telemetryflow-restapi-darwin-${{ matrix.arch }} "${DMG_DIR}/telemetryflow-restapi"
+          chmod +x "${DMG_DIR}/telemetryflow-gen" "${DMG_DIR}/telemetryflow-restapi"
+
+          # Create install script
+          cat > "${DMG_DIR}/install.sh" << 'EOF'
+          #!/bin/bash
+          # TelemetryFlow SDK macOS Installer
+
+          set -e
+
+          INSTALL_DIR="/usr/local/bin"
+
+          echo "Installing TelemetryFlow SDK generators..."
+
+          # Copy binaries
+          sudo cp telemetryflow-gen "${INSTALL_DIR}/"
+          sudo cp telemetryflow-restapi "${INSTALL_DIR}/"
+          sudo chmod +x "${INSTALL_DIR}/telemetryflow-gen" "${INSTALL_DIR}/telemetryflow-restapi"
+
+          echo ""
+          echo "TelemetryFlow SDK installed successfully!"
+          echo ""
+          echo "Available commands:"
+          echo "  telemetryflow-gen     - SDK code generator"
+          echo "  telemetryflow-restapi - RESTful API generator"
+          echo ""
+          echo "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
+          EOF
+          chmod +x "${DMG_DIR}/install.sh"
+
+          # Create uninstall script
+          cat > "${DMG_DIR}/uninstall.sh" << 'EOF'
+          #!/bin/bash
+          # TelemetryFlow SDK macOS Uninstaller
+
+          set -e
+
+          echo "Uninstalling TelemetryFlow SDK..."
+
+          sudo rm -f /usr/local/bin/telemetryflow-gen
+          sudo rm -f /usr/local/bin/telemetryflow-restapi
+
+          echo "TelemetryFlow SDK uninstalled successfully!"
+          EOF
+          chmod +x "${DMG_DIR}/uninstall.sh"
+
+          # Create README
+          cat > "${DMG_DIR}/README.txt" << EOF
+          TelemetryFlow SDK v${VERSION}
+          ================================
+          Architecture: ${{ matrix.display_name }} (${{ matrix.macos_arch }})
+
+          Installation:
+          1. Open Terminal
+          2. Navigate to this directory
+          3. Run: ./install.sh
+
+          Available Commands:
+          - telemetryflow-gen     - SDK code generator
+          - telemetryflow-restapi - RESTful API generator
+
+          Usage:
+          telemetryflow-gen init --project myapp --service my-service
+          telemetryflow-restapi new --name my-api --module github.com/example/my-api
+
+          Documentation: https://docs.telemetryflow.id
+          Support: support@telemetryflow.id
+
+          Copyright (c) 2024-2026 DevOpsCorner Indonesia
+          EOF
+
+      - name: Create DMG
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          DMG_NAME="telemetryflow-sdk-${VERSION}-darwin-${{ matrix.arch }}.dmg"
+          VOLUME_NAME="${{ env.PRODUCT_NAME }} ${VERSION}"
+
+          # Prevent Spotlight indexing
+          touch dmg-contents/.metadata_never_index
+
+          # Detach any existing mounted volumes
+          hdiutil detach "/Volumes/${VOLUME_NAME}" 2>/dev/null || true
+
+          # Remove any existing DMG file
+          rm -f "${DMG_NAME}"
+
+          # Sync and wait
+          sync
+          sleep 2
+
+          hdiutil create -volname "${VOLUME_NAME}" \
+                         -srcfolder "dmg-contents" \
+                         -ov -format UDZO \
+                         "${DMG_NAME}"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.arch }}
+          path: telemetryflow-sdk-*.dmg
+          retention-days: 1
+
+  # ===========================================================================
+  # Create Tarballs
+  # ===========================================================================
+  package-tarball:
+    name: Create Tarball (${{ matrix.os }}-${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: [prepare, build-linux, build-macos]
     strategy:
       matrix:
         include:
@@ -208,8 +659,6 @@ jobs:
             arch: amd64
           - os: darwin
             arch: arm64
-          - os: windows
-            arch: amd64
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -220,8 +669,7 @@ jobs:
           name: binaries-${{ matrix.os }}-${{ matrix.arch }}
           path: dist
 
-      - name: Create package (Unix)
-        if: matrix.os != 'windows'
+      - name: Create tarball
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
@@ -251,50 +699,11 @@ jobs:
 
           tar -czvf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
 
-      - name: Create package (Windows)
-        if: matrix.os == 'windows'
-        env:
-          VERSION: ${{ needs.prepare.outputs.version }}
-        run: |
-          PKG_NAME="telemetryflow-sdk-${VERSION}-windows-amd64"
-          mkdir -p "${PKG_NAME}"
-
-          cp dist/telemetryflow-gen-windows-amd64.exe "${PKG_NAME}/telemetryflow-gen.exe"
-          cp dist/telemetryflow-restapi-windows-amd64.exe "${PKG_NAME}/telemetryflow-restapi.exe"
-
-          cp README.md "${PKG_NAME}/" 2>/dev/null || true
-          cp LICENSE "${PKG_NAME}/" 2>/dev/null || true
-
-          # Create installation script
-          cat > "${PKG_NAME}/install.ps1" << 'EOF'
-          # TelemetryFlow SDK Generators - Windows Installer
-          $ErrorActionPreference = "Stop"
-          $InstallDir = "C:\Program Files\TelemetryFlow\SDK"
-
-          Write-Host "Installing TelemetryFlow SDK generators..." -ForegroundColor Green
-
-          New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-          Copy-Item -Path ".\telemetryflow-gen.exe" -Destination "$InstallDir\" -Force
-          Copy-Item -Path ".\telemetryflow-restapi.exe" -Destination "$InstallDir\" -Force
-
-          $envPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-          if ($envPath -notlike "*$InstallDir*") {
-              [Environment]::SetEnvironmentVariable("Path", "$envPath;$InstallDir", "Machine")
-          }
-
-          Write-Host "Installation complete!" -ForegroundColor Green
-          Write-Host "Run 'telemetryflow-gen --help' or 'telemetryflow-restapi --help' to get started."
-          EOF
-
-          zip -r "${PKG_NAME}.zip" "${PKG_NAME}"
-
-      - name: Upload package
+      - name: Upload tarball
         uses: actions/upload-artifact@v4
         with:
-          name: package-${{ matrix.os }}-${{ matrix.arch }}
-          path: |
-            *.tar.gz
-            *.zip
+          name: tarball-${{ matrix.os }}-${{ matrix.arch }}
+          path: telemetryflow-sdk-*.tar.gz
           retention-days: 1
 
   # ===========================================================================
@@ -303,27 +712,90 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [prepare, package]
+    needs:
+      - prepare
+      - package-rpm
+      - package-deb
+      - package-windows
+      - package-macos
+      - package-tarball
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Download all packages
+      - name: Download RPM packages
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          pattern: package-*
+          pattern: rpm-*
+          path: artifacts/rpm
+          merge-multiple: true
+
+      - name: Download DEB packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: deb-*
+          path: artifacts/deb
+          merge-multiple: true
+
+      - name: Download Windows packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: windows-*
+          path: artifacts/windows
+          merge-multiple: true
+
+      - name: Download macOS DMG packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dmg-*
+          path: artifacts/dmg
+          merge-multiple: true
+
+      - name: Download tarballs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tarball-*
+          path: artifacts/tarball
           merge-multiple: true
 
       - name: Prepare release assets
         run: |
           mkdir -p release
-          echo "=== Downloaded artifacts ==="
+
+          echo "=== Downloaded artifacts structure ==="
           find artifacts -type f -ls
-          echo "=== Copying to release ==="
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" \) -exec cp {} release/ \;
+
+          echo ""
+          echo "=== Collecting RPM packages ==="
+          find artifacts/rpm -name "*.rpm" -exec cp {} release/ \; 2>/dev/null || echo "No RPM packages found"
+
+          echo "=== Collecting DEB packages ==="
+          find artifacts/deb -name "*.deb" -exec cp {} release/ \; 2>/dev/null || echo "No DEB packages found"
+
+          echo "=== Collecting Windows packages ==="
+          find artifacts/windows -name "*.zip" -exec cp {} release/ \; 2>/dev/null || echo "No Windows packages found"
+
+          echo "=== Collecting macOS DMG packages ==="
+          find artifacts/dmg -name "*.dmg" -exec cp {} release/ \; 2>/dev/null || echo "No DMG packages found"
+
+          echo "=== Collecting tarballs ==="
+          find artifacts/tarball -name "*.tar.gz" -exec cp {} release/ \; 2>/dev/null || echo "No tarballs found"
+
+          echo ""
           echo "=== Release directory contents ==="
           ls -la release/
+
+          echo ""
+          echo "=== Package summary ==="
+          echo "RPM packages: $(ls release/*.rpm 2>/dev/null | wc -l)"
+          echo "DEB packages: $(ls release/*.deb 2>/dev/null | wc -l)"
+          echo "Windows ZIP:  $(ls release/*.zip 2>/dev/null | wc -l)"
+          echo "macOS DMG:    $(ls release/*.dmg 2>/dev/null | wc -l)"
+          echo "Tarballs:     $(ls release/*.tar.gz 2>/dev/null | wc -l)"
+          echo "Total files:  $(ls release/ | wc -l)"
+
           if [ -z "$(ls -A release/)" ]; then
             echo "ERROR: No release assets found!"
             exit 1
@@ -373,27 +845,31 @@ jobs:
 
             | Platform | Architecture | Package |
             |----------|--------------|---------|
-            | Linux | amd64 | tar.gz |
-            | Linux | arm64 | tar.gz |
-            | macOS | Intel (amd64) | tar.gz |
-            | macOS | Apple Silicon (arm64) | tar.gz |
-            | Windows | amd64 | zip |
+            | Linux | amd64 | RPM, DEB, tar.gz |
+            | Linux | arm64 | RPM, DEB, tar.gz |
+            | Windows | amd64 | ZIP (with installer) |
+            | macOS | Intel (amd64) | DMG, tar.gz |
+            | macOS | Apple Silicon (arm64) | DMG, tar.gz |
 
             ### Installation
 
-            **Linux/macOS:**
+            **Linux (DEB):**
             ```bash
-            tar -xzf telemetryflow-sdk-${{ needs.prepare.outputs.version }}-<os>-<arch>.tar.gz
-            cd telemetryflow-sdk-${{ needs.prepare.outputs.version }}-<os>-<arch>
-            ./install.sh
+            sudo dpkg -i telemetryflow-sdk_${{ needs.prepare.outputs.version }}_amd64.deb
             ```
 
-            **Windows (PowerShell as Administrator):**
-            ```powershell
-            Expand-Archive telemetryflow-sdk-${{ needs.prepare.outputs.version }}-windows-amd64.zip
-            cd telemetryflow-sdk-${{ needs.prepare.outputs.version }}-windows-amd64
-            .\install.ps1
+            **Linux (RPM):**
+            ```bash
+            sudo rpm -i telemetryflow-sdk-${{ needs.prepare.outputs.version }}-1.x86_64.rpm
             ```
+
+            **macOS:**
+            1. Open the DMG file
+            2. Run `./install.sh` in Terminal
+
+            **Windows (PowerShell as Administrator):**
+            1. Extract the ZIP file
+            2. Run `.\install.ps1`
 
             ### Usage
 
@@ -426,12 +902,11 @@ jobs:
     steps:
       - name: Summary
         run: |
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## ${{ env.PRODUCT_NAME }} - Release Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Product** | ${{ env.PRODUCT_NAME }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | ${{ needs.prepare.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | v${{ needs.prepare.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Commit** | ${{ needs.prepare.outputs.commit }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Branch** | ${{ needs.prepare.outputs.branch }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Build Time** | ${{ needs.prepare.outputs.build_time }} |" >> $GITHUB_STEP_SUMMARY
@@ -439,3 +914,15 @@ jobs:
           echo "### Generators" >> $GITHUB_STEP_SUMMARY
           echo "- telemetryflow-gen" >> $GITHUB_STEP_SUMMARY
           echo "- telemetryflow-restapi" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Packages" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Formats |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | RPM, DEB, tar.gz |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | ZIP |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | DMG, tar.gz |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Result |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Release | ${{ needs.release.result }} |" >> $GITHUB_STEP_SUMMARY
