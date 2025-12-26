@@ -1,7 +1,18 @@
-# {{.ProjectName}} - CI Pipeline
+# =============================================================================
+# {{.ProjectName}} - CI Workflow
+# =============================================================================
 #
-# This workflow runs on push and pull requests to main/develop branches.
-# It performs linting, testing, security scanning, and build verification.
+# {{.ProjectName}} - TelemetryFlow Microservices Platform
+# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+#
+# This workflow provides continuous integration for {{.ProjectName}}:
+# - Code quality checks (lint, vet, fmt)
+# - Unit and integration tests
+# - Build verification (multi-platform)
+# - Security scanning
+# - Coverage reporting
+#
+# =============================================================================
 
 name: CI
 
@@ -9,32 +20,61 @@ on:
   push:
     branches:
       - main
+      - master
       - develop
       - 'feature/**'
       - 'release/**'
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'tests/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - main
+      - master
       - develop
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.gitignore'
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'pkg/**'
+      - 'tests/**'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+    inputs:
+      run_e2e:
+        description: 'Run E2E tests'
+        required: false
+        type: boolean
+        default: false
+      skip_lint:
+        description: 'Skip linting'
+        required: false
+        type: boolean
+        default: false
 
 env:
   GO_VERSION: '1.24'
+  PRODUCT_NAME: {{.ProjectName}}
+  BINARY_NAME: {{.ProjectName | lower}}
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
 
 jobs:
   # ===========================================================================
   # Lint Job - Code quality checks
   # ===========================================================================
   lint:
-    name: Lint
+    name: Lint & Code Quality
     runs-on: ubuntu-latest
+    if: ${{"{{"}} !inputs.skip_lint {{"}}"}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,6 +113,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
 {{- if eq .DBDriver "postgres"}}
     services:
       postgres:
@@ -173,6 +214,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: lint
+    if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -203,10 +245,12 @@ jobs:
   # Build Job - Build verification
   # ===========================================================================
   build:
-    name: Build
+    name: Build (${{"{{"}} matrix.goos {{"}}"}}/{{"{{"}} matrix.goarch {{"}}"}})
     runs-on: ubuntu-latest
     needs: [test, security]
+    if: always() && needs.test.result == 'success'
     strategy:
+      fail-fast: false
       matrix:
         goos: [linux, darwin, windows]
         goarch: [amd64, arm64]
@@ -241,13 +285,13 @@ jobs:
           retention-days: 7
 
   # ===========================================================================
-  # E2E Job - End-to-end tests (only on main/develop)
+  # E2E Job - End-to-end tests (only on main/develop or when manually triggered)
   # ===========================================================================
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: ${{"{{"}} inputs.run_e2e == true || github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') {{"}}"}}
 {{- if eq .DBDriver "postgres"}}
     services:
       postgres:
@@ -311,3 +355,37 @@ jobs:
           DB_PASSWORD: password
           DB_NAME: {{.DBName}}_e2e
 {{- end}}
+
+  # ===========================================================================
+  # CI Summary
+  # ===========================================================================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [lint, test, security, build]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## ${{"{{"}} env.PRODUCT_NAME {{"}}"}} - CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{"{{"}} needs.lint.result {{"}}"}} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test | ${{"{{"}} needs.test.result {{"}}"}} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ${{"{{"}} needs.security.result {{"}}"}} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{"{{"}} needs.build.result {{"}}"}} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{"{{"}} github.sha {{"}}"}}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{"{{"}} github.ref_name {{"}}"}}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{"{{"}} github.event_name {{"}}"}}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          if [[ "${{"{{"}} needs.lint.result {{"}}"}}" == "failure" ]] || \
+             [[ "${{"{{"}} needs.test.result {{"}}"}}" == "failure" ]] || \
+             [[ "${{"{{"}} needs.build.result {{"}}"}}" == "failure" ]]; then
+            echo "CI failed - one or more required jobs failed"
+            exit 1
+          fi
+          echo "CI passed successfully"
