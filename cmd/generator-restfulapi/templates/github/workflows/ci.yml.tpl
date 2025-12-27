@@ -101,7 +101,7 @@ jobs:
         run: make staticcheck
 
       - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: latest
           args: --timeout=5m

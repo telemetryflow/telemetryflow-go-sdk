@@ -15,13 +15,12 @@ linters:
     - errcheck
     - ineffassign
     - unused
+  exclusions:
+    paths:
+      - vendor
 
   settings:
     staticcheck:
       checks:
         - "all"
         - "-SA1019"
-
-issues:
-  exclude-dirs:
-    - vendor
