@@ -136,7 +136,7 @@ func (c *TelemetryConfig) IsRetryEnabled() bool                { return c.retryE
 func (c *TelemetryConfig) MaxRetries() int                     { return c.maxRetries }
 func (c *TelemetryConfig) RetryBackoff() time.Duration         { return c.retryBackoff }
 func (c *TelemetryConfig) IsCompressionEnabled() bool          { return c.compressionGzip }
-func (c *TelemetryConfig) GRPCKeepalive() *GRPCKeepaliveConfig  { return c.grpcKeepalive }
+func (c *TelemetryConfig) GRPCKeepalive() *GRPCKeepaliveConfig { return c.grpcKeepalive }
 func (c *TelemetryConfig) GRPCMaxRecvMsgSize() int             { return c.grpcMaxRecvMsgSize }
 func (c *TelemetryConfig) GRPCMaxSendMsgSize() int             { return c.grpcMaxSendMsgSize }
 func (c *TelemetryConfig) GRPCReadBufferSize() int             { return c.grpcReadBufferSize }
