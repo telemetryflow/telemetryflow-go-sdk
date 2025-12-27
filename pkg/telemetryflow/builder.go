@@ -10,33 +10,38 @@ import (
 
 // Builder provides a fluent interface for creating TelemetryFlow clients
 type Builder struct {
-	apiKeyID       string
-	apiKeySecret   string
-	endpoint       string
-	serviceName    string
-	serviceVersion string
-	environment    string
-	protocol       domain.Protocol
-	insecure       bool
-	timeout        time.Duration
-	enableMetrics  bool
-	enableLogs     bool
-	enableTraces   bool
-	customAttrs    map[string]string
-	errors         []error
+	apiKeyID         string
+	apiKeySecret     string
+	collectorID      string
+	endpoint         string
+	serviceName      string
+	serviceNamespace string
+	serviceVersion   string
+	environment      string
+	protocol         domain.Protocol
+	insecure         bool
+	timeout          time.Duration
+	enableMetrics    bool
+	enableLogs       bool
+	enableTraces     bool
+	enableExemplars  bool
+	customAttrs      map[string]string
+	errors           []error
 }
 
 // NewBuilder creates a new SDK builder
 func NewBuilder() *Builder {
 	return &Builder{
-		protocol:      domain.ProtocolGRPC,
-		insecure:      false,
-		timeout:       30 * time.Second,
-		enableMetrics: true,
-		enableLogs:    true,
-		enableTraces:  true,
-		customAttrs:   make(map[string]string),
-		errors:        make([]error, 0),
+		protocol:         domain.ProtocolGRPC,
+		insecure:         false,
+		timeout:          30 * time.Second,
+		enableMetrics:    true,
+		enableLogs:       true,
+		enableTraces:     true,
+		enableExemplars:  true, // enabled by default for metrics-to-traces correlation
+		serviceNamespace: "telemetryflow",
+		customAttrs:      make(map[string]string),
+		errors:           make([]error, 0),
 	}
 }
 
@@ -178,12 +183,48 @@ func (b *Builder) WithCustomAttribute(key, value string) *Builder {
 	return b
 }
 
+// WithCollectorID sets the collector identifier for TelemetryFlow headers
+func (b *Builder) WithCollectorID(id string) *Builder {
+	b.collectorID = id
+	return b
+}
+
+// WithCollectorIDFromEnv reads collector ID from environment variable
+func (b *Builder) WithCollectorIDFromEnv() *Builder {
+	b.collectorID = os.Getenv("TELEMETRYFLOW_COLLECTOR_ID")
+	return b
+}
+
+// WithServiceNamespace sets the service namespace
+func (b *Builder) WithServiceNamespace(namespace string) *Builder {
+	b.serviceNamespace = namespace
+	return b
+}
+
+// WithServiceNamespaceFromEnv reads service namespace from environment variable
+func (b *Builder) WithServiceNamespaceFromEnv() *Builder {
+	namespace := os.Getenv("TELEMETRYFLOW_SERVICE_NAMESPACE")
+	if namespace == "" {
+		namespace = "telemetryflow"
+	}
+	b.serviceNamespace = namespace
+	return b
+}
+
+// WithExemplars enables/disables exemplars for metrics-to-traces correlation
+func (b *Builder) WithExemplars(enabled bool) *Builder {
+	b.enableExemplars = enabled
+	return b
+}
+
 // WithAutoConfiguration attempts to configure from environment variables
 func (b *Builder) WithAutoConfiguration() *Builder {
 	return b.
 		WithAPIKeyFromEnv().
 		WithEndpointFromEnv().
 		WithServiceFromEnv().
+		WithServiceNamespaceFromEnv().
+		WithCollectorIDFromEnv().
 		WithEnvironmentFromEnv()
 }
 
@@ -224,7 +265,14 @@ func (b *Builder) Build() (*Client, error) {
 		WithTimeout(b.timeout).
 		WithSignals(b.enableMetrics, b.enableLogs, b.enableTraces).
 		WithServiceVersion(b.serviceVersion).
-		WithEnvironment(b.environment)
+		WithServiceNamespace(b.serviceNamespace).
+		WithEnvironment(b.environment).
+		WithExemplars(b.enableExemplars)
+
+	// Set collector ID if provided
+	if b.collectorID != "" {
+		config.WithCollectorID(b.collectorID)
+	}
 
 	// Add custom attributes
 	for key, value := range b.customAttrs {

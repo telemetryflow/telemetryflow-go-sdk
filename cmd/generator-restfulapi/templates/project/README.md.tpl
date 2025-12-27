@@ -235,7 +235,7 @@ Configuration is loaded from environment variables and `.env` file.
 | `MYSQL_VERSION` | MySQL image version | `8.0` |
 {{- end}}
 {{- if .EnableTelemetry}}
-| `OTEL_VERSION` | OTEL Collector image version | `latest` |
+| `OTEL_VERSION` | OTEL Collector image version | `0.142.0` |
 | `JAEGER_VERSION` | Jaeger image version | `2.2.0` |
 {{- end}}
 | `CONTAINER_API` | API container name | `{{.ProjectName | lower}}_api` |

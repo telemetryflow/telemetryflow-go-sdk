@@ -84,7 +84,7 @@ services:
   # OpenTelemetry Collector
   # ---------------------------------------------------------------------------
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.114.0
+    image: otel/opentelemetry-collector-contrib:0.142.0
     container_name: otel-collector-e2e
     command: ["--config=/etc/otel/config.yaml"]
     ports:

@@ -41,6 +41,11 @@ func (f *OTLPExporterFactory) CreateResource(ctx context.Context) (*resource.Res
 		semconv.DeploymentEnvironment(f.config.Environment()),
 	}
 
+	// Add service namespace if configured
+	if f.config.ServiceNamespace() != "" {
+		attrs = append(attrs, semconv.ServiceNamespace(f.config.ServiceNamespace()))
+	}
+
 	// Add custom attributes
 	for key, value := range f.config.CustomAttributes() {
 		attrs = append(attrs, attribute.String(key, value))
@@ -207,11 +212,21 @@ func (f *OTLPExporterFactory) createHTTPMetricExporter(ctx context.Context) (sdk
 // ===== HELPER METHODS =====
 
 // getAuthHeaders returns headers with TelemetryFlow authentication
+// Headers are aligned with TelemetryFlow Collector expected format
 func (f *OTLPExporterFactory) getAuthHeaders() map[string]string {
-	return map[string]string{
-		"authorization": f.config.Credentials().AuthorizationHeader(),
-		"content-type":  "application/x-protobuf",
+	headers := map[string]string{
+		"authorization":              f.config.Credentials().AuthorizationHeader(),
+		"content-type":               "application/x-protobuf",
+		"X-TelemetryFlow-Key-ID":     f.config.Credentials().KeyID(),
+		"X-TelemetryFlow-Key-Secret": f.config.Credentials().KeySecret(),
 	}
+
+	// Add collector ID if configured
+	if f.config.CollectorID() != "" {
+		headers["X-TelemetryFlow-Collector-ID"] = f.config.CollectorID()
+	}
+
+	return headers
 }
 
 // authInterceptor creates a gRPC interceptor that adds authentication
@@ -224,10 +239,20 @@ func (f *OTLPExporterFactory) authInterceptor() grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		// Add authentication to context
+		// Add TelemetryFlow authentication headers to context
 		ctx = metadata.AppendToOutgoingContext(ctx,
 			"authorization", f.config.Credentials().AuthorizationHeader(),
+			"x-telemetryflow-key-id", f.config.Credentials().KeyID(),
+			"x-telemetryflow-key-secret", f.config.Credentials().KeySecret(),
 		)
+
+		// Add collector ID if configured
+		if f.config.CollectorID() != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-collector-id", f.config.CollectorID(),
+			)
+		}
+
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }

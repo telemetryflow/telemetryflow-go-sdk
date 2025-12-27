@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OTLP-100%25%20Compliant-green" alt="OTLP Compliant"></a>
   <a href="https://hub.docker.com/r/telemetryflow/telemetryflow-sdk"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.0.1-blue.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version"></a>
 </p>
 
 <p align="center">
@@ -26,6 +26,181 @@ All notable changes to the TelemetryFlow Go SDK will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.0] - 2024-12-27
+
+### Added
+
+#### Go SDK Enhancements
+
+- **Exemplars Support**: Enabled by default for metrics-to-traces correlation
+  - New `WithExemplars(bool)` builder method
+  - New `IsExemplarsEnabled()` config getter
+  - Compatible with OTEL Collector spanmetrics connector
+
+- **Service Namespace**: Support for multi-tenant service organization
+  - New `WithServiceNamespace(string)` builder and config method
+  - New `WithServiceNamespaceFromEnv()` builder method
+  - New `ServiceNamespace()` config getter
+  - Environment variable: `TELEMETRYFLOW_SERVICE_NAMESPACE`
+  - Default value: `telemetryflow`
+  - Added to OTLP resource using semconv `service.namespace`
+
+- **Collector ID**: Unique identifier for TelemetryFlow collector authentication
+  - New `WithCollectorID(string)` builder and config method
+  - New `WithCollectorIDFromEnv()` builder method
+  - New `CollectorID()` config getter
+  - Environment variable: `TELEMETRYFLOW_COLLECTOR_ID`
+  - Added `X-TelemetryFlow-Collector-ID` header to OTLP exports
+
+- **TelemetryFlow Custom Headers**: Enhanced authentication headers
+  - `X-TelemetryFlow-Key-ID`: API Key ID header
+  - `X-TelemetryFlow-Key-Secret`: API Key Secret header
+  - `X-TelemetryFlow-Collector-ID`: Collector identifier header
+  - Headers added to both gRPC metadata and HTTP headers
+
+- **Enhanced gRPC Configuration**:
+  - New `GRPCKeepaliveConfig` struct with Time, Timeout, PermitWithoutStream
+  - `WithGRPCKeepalive(time, timeout, permitWithoutStream)` config method
+  - `WithGRPCBufferSizes(readSize, writeSize)` config method
+  - `WithGRPCMessageSizes(recvSize, sendSize)` config method
+  - New getters: `GRPCKeepalive()`, `GRPCMaxRecvMsgSize()`, `GRPCMaxSendMsgSize()`, `GRPCReadBufferSize()`, `GRPCWriteBufferSize()`
+  - Default settings aligned with OTEL Collector configuration
+
+#### OTEL Collector Configuration Enhancements
+
+- **Connectors Support**: Added `spanmetrics` and `servicegraph` connectors for:
+  - Deriving metrics from traces with exemplars support
+  - Building service dependency graphs automatically
+  - Metrics-to-traces correlation for drill-down analysis
+- **Environment Variable Support**: Full support for `TELEMETRYFLOW_*` environment variables in configuration templates
+- **TelemetryFlow Extensions**: Custom `telemetryflow:` and `collector:` sections for standalone build authentication
+
+#### Configuration Templates
+
+- New `otel-collector.yaml.tpl` template replacing `ocb-collector.yaml.tpl`
+- Updated `tfo-collector.yaml.tpl` with standard OTEL format (removed custom `enabled` flags)
+- Added connector pipelines: `metrics/spanmetrics` and `metrics/servicegraph`
+- OpenMetrics support with `enable_open_metrics: true` for exemplars in Prometheus
+
+### Changed
+
+#### SDK Default Configuration
+
+- **Default Configuration**: Updated defaults to align with TelemetryFlow Collector
+  - gRPC keepalive: 10s time, 5s timeout
+  - gRPC buffer sizes: 512KB read/write
+  - gRPC message sizes: 4 MiB max recv/send
+  - Exemplars enabled by default
+  - Service namespace defaults to "telemetryflow"
+
+- **Resource Attributes**: Service namespace now added to OTLP resource
+  - Uses OpenTelemetry semconv `service.namespace` attribute
+
+- **AutoConfiguration**: Extended to include new environment variables
+  - Now reads `TELEMETRYFLOW_SERVICE_NAMESPACE`
+  - Now reads `TELEMETRYFLOW_COLLECTOR_ID`
+
+#### Breaking Changes
+
+- **Configuration Format**: Migrated from custom format with `enabled` flags to standard OTEL format
+  - Old: `enabled: true/false` flags throughout config
+  - New: Comment out sections to disable (standard OTEL approach)
+- **Template Renamed**: `ocb-collector.yaml.tpl` → `otel-collector.yaml.tpl`
+- **Exporter Renamed**: `logging` exporter → `debug` exporter (standard OTEL naming)
+- **Pipeline Structure**: Moved from `pipelines:` at root to `service.pipelines:`
+
+#### Configuration Updates
+
+- Updated `configs/otel-collector.yaml` with connectors and new telemetry format
+- Updated `tests/e2e/testdata/otel-collector.yaml` with memory limiter and new format
+- Updated batch processor settings: `timeout: 200ms`, `send_batch_size: 8192`
+- Updated telemetry format to use `service.telemetry.metrics.readers`
+
+### Fixed
+
+- **Trace Exporter**: Fixed issue where spans were not being properly exported
+  - StartSpanDirect now correctly returns OpenTelemetry span IDs
+  - Resolved "span-id-placeholder" issue in v1.0.x
+
+### Dependencies
+
+- OpenTelemetry Go SDK: v1.39.0 (latest stable)
+- OpenTelemetry Exporters: v1.39.0
+- gRPC: v1.77.0
+- Compatible with OTEL Collector Contrib v0.142.0
+
+### Removed
+
+- Removed `ocb-collector.yaml.tpl` (replaced by `otel-collector.yaml.tpl`)
+- Removed `otel-collector-config.yaml.tpl` (duplicate file)
+- Removed custom `enabled` flags from all configuration templates
+
+### Migration Guide
+
+#### From 1.0.x to 1.1.0
+
+**Configuration Format Changes:**
+
+```yaml
+# Old format (1.0.x) - Custom with enabled flags
+receivers:
+  otlp:
+    enabled: true  # No longer supported
+    protocols:
+      grpc:
+        enabled: true  # No longer supported
+        endpoint: "0.0.0.0:4317"
+
+exporters:
+  logging:  # Renamed
+    enabled: true
+    loglevel: "info"
+
+pipelines:  # Moved under service
+  metrics:
+    receivers: [otlp]
+    exporters: [logging]
+
+# New format (1.1.0) - Standard OTEL
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+
+exporters:
+  debug:  # Standard OTEL naming
+    verbosity: detailed
+
+service:
+  pipelines:  # Under service section
+    metrics:
+      receivers: [otlp]
+      exporters: [debug]
+```
+
+**New Connectors (Optional):**
+
+```yaml
+connectors:
+  spanmetrics:
+    exemplars:
+      enabled: true
+  servicegraph:
+    store:
+      ttl: 2s
+
+service:
+  pipelines:
+    traces:
+      exporters: [debug, spanmetrics, servicegraph]
+    metrics/spanmetrics:
+      receivers: [spanmetrics]
+      exporters: [prometheus]
+```
+
+---
 
 ## [1.0.1] - 2024-12-23
 
@@ -234,5 +409,6 @@ None at this time.
 
 ---
 
+[1.1.0]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/telemetryflow/telemetryflow-go-sdk/releases/tag/v1.0.0

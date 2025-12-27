@@ -35,7 +35,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "minimal_config",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -51,7 +51,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "production_config",
 		ServiceName: "production-api",
-		Version:     "2.1.0",
+		Version:     "1.1.0",
 		Environment: "production",
 		Endpoint:    "api.telemetryflow.id:4317",
 		Protocol:    "grpc",
@@ -71,7 +71,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "http_protocol",
 		ServiceName: "http-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "staging",
 		Endpoint:    "https://api.telemetryflow.id:4318",
 		Protocol:    "http",
@@ -87,7 +87,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "metrics_only",
 		ServiceName: "metrics-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -103,7 +103,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "traces_only",
 		ServiceName: "tracing-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -123,7 +123,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "empty_service_name",
 		ServiceName: "",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -133,7 +133,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "empty_endpoint",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "",
 		Protocol:    "grpc",
@@ -143,7 +143,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "invalid_protocol",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "websocket",
@@ -153,7 +153,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "negative_timeout",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -164,7 +164,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "zero_batch_size",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -175,7 +175,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "no_signals_enabled",
 		ServiceName: "test-service",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -193,7 +193,7 @@ TELEMETRYFLOW_API_KEY_ID=tfk_test_key_12345
 TELEMETRYFLOW_API_KEY_SECRET=tfs_test_secret_67890
 TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317
 TELEMETRYFLOW_SERVICE_NAME=test-service
-TELEMETRYFLOW_SERVICE_VERSION=1.0.0
+TELEMETRYFLOW_SERVICE_VERSION=1.1.0
 TELEMETRYFLOW_ENVIRONMENT=development
 TELEMETRYFLOW_PROTOCOL=grpc
 TELEMETRYFLOW_INSECURE=false
@@ -212,7 +212,7 @@ telemetryflow:
   endpoint: api.telemetryflow.id:4317
   service:
     name: test-service
-    version: 1.0.0
+    Version: 1.1.0
   environment: development
   protocol: grpc
   insecure: false

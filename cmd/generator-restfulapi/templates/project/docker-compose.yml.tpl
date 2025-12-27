@@ -174,15 +174,29 @@ services:
   otel-collector:
     profiles: ["monitoring", "all"]
     platform: linux/amd64
-    # OTEL Collector Community Contributor
-    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-latest}
-    # TelemetryFlow Collector (TFO-Collector)
-    image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
+    # =============================================================================
+    # OTEL Collector Community Contributor (Standard OTEL format)
+    image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    # =============================================================================
+    # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
+    # image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-0.142.0}
+    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    # =============================================================================
+    # TelemetryFlow Collector (TFO-Collector) - Custom TFO format (OTLP not implemented yet)
+    # image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-0.142.0}
+    # =============================================================================
     container_name: ${CONTAINER_OTEL:-{{.ProjectName | lower}}_otel}
     restart: unless-stopped
-    command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
-      - ./configs/otel/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      # OTEL Collector Community Contributor config
+      - ./configs/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # =============================================================================
+      # TelemetryFlow Collector OCB config (Standard OTEL format)
+      # - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
+      # =============================================================================
+      # TelemetryFlow Collector config (Custom TFO format)
+      # - ./configs/otel/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
     ports:
       - "${PORT_OTEL_GRPC:-4317}:4317"     # OTLP gRPC
       - "${PORT_OTEL_HTTP:-4318}:4318"     # OTLP HTTP
@@ -205,7 +219,7 @@ services:
   jaeger:
     profiles: ["monitoring", "all"]
     platform: linux/amd64
-    image: jaegertracing/jaeger:${JAEGER_VERSION:-2}
+    image: jaegertracing/jaeger:${JAEGER_VERSION:-2.2.0}
     container_name: ${CONTAINER_JAEGER:-{{.ProjectName | lower}}_jaeger}
     restart: unless-stopped
     ports:

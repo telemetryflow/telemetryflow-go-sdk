@@ -23,11 +23,19 @@ const (
 	SignalTraces  SignalType = "traces"
 )
 
+// GRPCKeepaliveConfig holds gRPC keepalive settings
+type GRPCKeepaliveConfig struct {
+	Time                time.Duration
+	Timeout             time.Duration
+	PermitWithoutStream bool
+}
+
 // TelemetryConfig is an aggregate root that contains all configuration
 // This is the main Domain Entity in our DDD design
 type TelemetryConfig struct {
 	// Identity
 	credentials *Credentials
+	collectorID string // Unique collector identifier for TelemetryFlow headers
 
 	// Connection settings
 	endpoint        string
@@ -39,11 +47,19 @@ type TelemetryConfig struct {
 	retryBackoff    time.Duration
 	compressionGzip bool
 
+	// gRPC specific settings
+	grpcKeepalive       *GRPCKeepaliveConfig
+	grpcMaxRecvMsgSize  int // in MiB
+	grpcMaxSendMsgSize  int // in MiB
+	grpcReadBufferSize  int // in bytes
+	grpcWriteBufferSize int // in bytes
+
 	// Signal configuration
 	enabledSignals map[SignalType]bool
 
 	// Resource attributes
 	serviceName      string
+	serviceNamespace string
 	serviceVersion   string
 	environment      string
 	customAttributes map[string]string
@@ -54,6 +70,9 @@ type TelemetryConfig struct {
 
 	// Rate limiting (client-side)
 	rateLimit int // requests per minute
+
+	// Exemplars support (for metrics-to-traces correlation)
+	exemplarsEnabled bool
 }
 
 // NewTelemetryConfig creates a new configuration with required fields
@@ -70,6 +89,7 @@ func NewTelemetryConfig(credentials *Credentials, endpoint string, serviceName s
 
 	return &TelemetryConfig{
 		credentials:     credentials,
+		collectorID:     "", // auto-generated if empty
 		endpoint:        endpoint,
 		protocol:        ProtocolGRPC, // default
 		insecure:        false,
@@ -78,23 +98,36 @@ func NewTelemetryConfig(credentials *Credentials, endpoint string, serviceName s
 		maxRetries:      3,
 		retryBackoff:    5 * time.Second,
 		compressionGzip: true,
+		// gRPC settings aligned with OTEL Collector config
+		grpcKeepalive: &GRPCKeepaliveConfig{
+			Time:                10 * time.Second,
+			Timeout:             5 * time.Second,
+			PermitWithoutStream: true,
+		},
+		grpcMaxRecvMsgSize:  4,      // 4 MiB
+		grpcMaxSendMsgSize:  4,      // 4 MiB
+		grpcReadBufferSize:  524288, // 512 KB
+		grpcWriteBufferSize: 524288, // 512 KB
 		enabledSignals: map[SignalType]bool{
 			SignalMetrics: true,
 			SignalLogs:    true,
 			SignalTraces:  true,
 		},
 		serviceName:      serviceName,
+		serviceNamespace: "telemetryflow", // default namespace
 		serviceVersion:   "1.0.0",
 		environment:      "production",
 		customAttributes: make(map[string]string),
 		batchTimeout:     10 * time.Second,
 		batchMaxSize:     512,
 		rateLimit:        1000,
+		exemplarsEnabled: true, // enabled by default for metrics-to-traces correlation
 	}, nil
 }
 
 // Getters for immutability
 func (c *TelemetryConfig) Credentials() *Credentials           { return c.credentials }
+func (c *TelemetryConfig) CollectorID() string                 { return c.collectorID }
 func (c *TelemetryConfig) Endpoint() string                    { return c.endpoint }
 func (c *TelemetryConfig) Protocol() Protocol                  { return c.protocol }
 func (c *TelemetryConfig) IsInsecure() bool                    { return c.insecure }
@@ -103,13 +136,20 @@ func (c *TelemetryConfig) IsRetryEnabled() bool                { return c.retryE
 func (c *TelemetryConfig) MaxRetries() int                     { return c.maxRetries }
 func (c *TelemetryConfig) RetryBackoff() time.Duration         { return c.retryBackoff }
 func (c *TelemetryConfig) IsCompressionEnabled() bool          { return c.compressionGzip }
+func (c *TelemetryConfig) GRPCKeepalive() *GRPCKeepaliveConfig  { return c.grpcKeepalive }
+func (c *TelemetryConfig) GRPCMaxRecvMsgSize() int             { return c.grpcMaxRecvMsgSize }
+func (c *TelemetryConfig) GRPCMaxSendMsgSize() int             { return c.grpcMaxSendMsgSize }
+func (c *TelemetryConfig) GRPCReadBufferSize() int             { return c.grpcReadBufferSize }
+func (c *TelemetryConfig) GRPCWriteBufferSize() int            { return c.grpcWriteBufferSize }
 func (c *TelemetryConfig) ServiceName() string                 { return c.serviceName }
+func (c *TelemetryConfig) ServiceNamespace() string            { return c.serviceNamespace }
 func (c *TelemetryConfig) ServiceVersion() string              { return c.serviceVersion }
 func (c *TelemetryConfig) Environment() string                 { return c.environment }
 func (c *TelemetryConfig) CustomAttributes() map[string]string { return c.customAttributes }
 func (c *TelemetryConfig) BatchTimeout() time.Duration         { return c.batchTimeout }
 func (c *TelemetryConfig) BatchMaxSize() int                   { return c.batchMaxSize }
 func (c *TelemetryConfig) RateLimit() int                      { return c.rateLimit }
+func (c *TelemetryConfig) IsExemplarsEnabled() bool            { return c.exemplarsEnabled }
 
 // IsSignalEnabled checks if a signal type is enabled
 func (c *TelemetryConfig) IsSignalEnabled(signal SignalType) bool {
@@ -186,6 +226,48 @@ func (c *TelemetryConfig) WithBatchSettings(timeout time.Duration, maxSize int) 
 // WithRateLimit sets client-side rate limit (requests per minute)
 func (c *TelemetryConfig) WithRateLimit(limit int) *TelemetryConfig {
 	c.rateLimit = limit
+	return c
+}
+
+// WithCollectorID sets the collector identifier for TelemetryFlow headers
+func (c *TelemetryConfig) WithCollectorID(id string) *TelemetryConfig {
+	c.collectorID = id
+	return c
+}
+
+// WithServiceNamespace sets the service namespace
+func (c *TelemetryConfig) WithServiceNamespace(namespace string) *TelemetryConfig {
+	c.serviceNamespace = namespace
+	return c
+}
+
+// WithGRPCKeepalive configures gRPC keepalive settings
+func (c *TelemetryConfig) WithGRPCKeepalive(time, timeout time.Duration, permitWithoutStream bool) *TelemetryConfig {
+	c.grpcKeepalive = &GRPCKeepaliveConfig{
+		Time:                time,
+		Timeout:             timeout,
+		PermitWithoutStream: permitWithoutStream,
+	}
+	return c
+}
+
+// WithGRPCBufferSizes sets gRPC read/write buffer sizes
+func (c *TelemetryConfig) WithGRPCBufferSizes(readSize, writeSize int) *TelemetryConfig {
+	c.grpcReadBufferSize = readSize
+	c.grpcWriteBufferSize = writeSize
+	return c
+}
+
+// WithGRPCMessageSizes sets gRPC max recv/send message sizes in MiB
+func (c *TelemetryConfig) WithGRPCMessageSizes(recvSize, sendSize int) *TelemetryConfig {
+	c.grpcMaxRecvMsgSize = recvSize
+	c.grpcMaxSendMsgSize = sendSize
+	return c
+}
+
+// WithExemplars enables/disables exemplars for metrics-to-traces correlation
+func (c *TelemetryConfig) WithExemplars(enabled bool) *TelemetryConfig {
+	c.exemplarsEnabled = enabled
 	return c
 }
 

@@ -90,7 +90,7 @@ PORT={{.ServerPort}}
 {{- if .EnableTelemetry}}
 
 # OpenTelemetry Collector
-OTEL_VERSION=latest
+OTEL_VERSION=0.142.0
 CONTAINER_OTEL={{.ProjectName | lower}}_otel
 PORT_OTEL_GRPC=4317
 PORT_OTEL_HTTP=4318

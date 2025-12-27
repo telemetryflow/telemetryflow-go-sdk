@@ -70,7 +70,7 @@ services:
   # ---------------------------------------------------------------------------
   otel-collector:
     container_name: otel-collector-dev
-    image: otel/opentelemetry-collector-contrib:0.114.0
+    image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
     command: ["--config=/etc/otel/config.yaml"]
     ports:
       - "${OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC

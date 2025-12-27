@@ -1,50 +1,63 @@
+# =============================================================================
 # TelemetryFlow Collector Configuration
+# =============================================================================
 # {{.ProjectName}} - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 {{.ProjectName}}. All rights reserved.
+# Copyright (c) 2024-2026 TelemetryFlow. All rights reserved.
 #
-# This is the main configuration file for the TelemetryFlow Collector.
-# Copy this file to /etc/tfo-collector/tfo-collector.yaml or ~/.tfo-collector/tfo-collector.yaml
-# and customize as needed.
+# This configuration uses STANDARD OpenTelemetry Collector format for
+# compatibility with both build types:
+#
+#   - Standalone: ./tfo-collector start --config tfo-collector.yaml
+#   - OCB:        ./tfo-collector-ocb --config tfo-collector.yaml
+#
+# Copy to: /etc/tfo-collector/tfo-collector.yaml or ~/.tfo-collector/
+#
+# =============================================================================
+# Environment Variables
+# =============================================================================
+#   TELEMETRYFLOW_API_KEY_ID      - API Key ID for authentication (tfk_xxx)
+#   TELEMETRYFLOW_API_KEY_SECRET  - API Key Secret for authentication (tfs_xxx)
+#   TELEMETRYFLOW_ENDPOINT        - TelemetryFlow backend endpoint (host:port)
+#   TELEMETRYFLOW_COLLECTOR_ID    - Unique collector identifier (optional)
+#   TELEMETRYFLOW_COLLECTOR_NAME  - Human-readable collector name (optional)
+#   TELEMETRYFLOW_ENVIRONMENT     - Deployment environment (optional)
+#
+# =============================================================================
 
-# Collector identification
-collector:
-  # Unique collector identifier (auto-generated if empty)
-  id: ""
-
-  # Collector hostname (auto-detected if empty)
-  hostname: ""
-
-  # Human-readable description
-  description: "{{.ProjectName}} - TelemetryFlow Collector"
-
-  # Custom tags for labeling
-  tags:
-    environment: "production"
-    datacenter: "dc1"
-
-# Receivers - how telemetry data enters the collector
-receivers:
-  # OTLP receiver for OpenTelemetry Protocol
-  otlp:
+# =============================================================================
+# TelemetryFlow Extensions (Standalone-specific, ignored by OCB)
+# =============================================================================
+telemetryflow:
+  api_key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  api_key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+  endpoint: "${TELEMETRYFLOW_ENDPOINT:-localhost:4317}"
+  tls:
     enabled: true
+    insecure_skip_verify: false
+
+collector:
+  id: "${TELEMETRYFLOW_COLLECTOR_ID}"
+  hostname: ""
+  name: "${TELEMETRYFLOW_COLLECTOR_NAME:-{{.ProjectName}} Collector}"
+  description: "{{.ProjectName}} - TelemetryFlow Collector"
+  version: ""
+  tags:
+    environment: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
+    datacenter: "default"
+    service: "{{.ServiceName}}"
+
+# =============================================================================
+# RECEIVERS - How telemetry data enters the collector
+# =============================================================================
+receivers:
+  otlp:
     protocols:
-      # gRPC protocol settings
       grpc:
-        enabled: true
         endpoint: "0.0.0.0:4317"
         max_recv_msg_size_mib: 4
         max_concurrent_streams: 100
         read_buffer_size: 524288
         write_buffer_size: 524288
-        # TLS configuration (optional)
-        tls:
-          enabled: false
-          cert_file: ""
-          key_file: ""
-          ca_file: ""
-          client_auth_type: "none"  # none, request, require, verify
-          min_version: "1.2"
-        # Keepalive settings
         keepalive:
           server_parameters:
             max_connection_idle: 15s
@@ -52,19 +65,8 @@ receivers:
             max_connection_age_grace: 5s
             time: 10s
             timeout: 5s
-
-      # HTTP protocol settings
       http:
-        enabled: true
         endpoint: "0.0.0.0:4318"
-        max_request_body_size: 10485760  # 10MB
-        include_metadata: true
-        # TLS configuration (optional)
-        tls:
-          enabled: false
-          cert_file: ""
-          key_file: ""
-        # CORS settings
         cors:
           allowed_origins:
             - "*"
@@ -72,196 +74,156 @@ receivers:
             - "*"
           max_age: 7200
 
-  # Prometheus scrape receiver (optional)
-  prometheus:
-    enabled: false
-    scrape_configs:
-      - job_name: "node-exporter"
-        scrape_interval: 15s
-        scrape_timeout: 10s
-        metrics_path: "/metrics"
-        static_configs:
-          - targets:
-              - "localhost:9100"
-            labels:
-              env: "production"
-
-# Processors - how telemetry data is processed
+# =============================================================================
+# PROCESSORS - How telemetry data is processed
+# =============================================================================
 processors:
-  # Batch processor for efficient data handling
   batch:
-    enabled: true
-    send_batch_size: 8192
-    send_batch_max_size: 0  # 0 = no limit
     timeout: 200ms
+    send_batch_size: 8192
+    send_batch_max_size: 0
 
-  # Memory limiter to prevent OOM
   memory_limiter:
-    enabled: true
     check_interval: 1s
-    limit_mib: 0  # 0 = use percentage
-    spike_limit_mib: 0
     limit_percentage: 80
     spike_limit_percentage: 25
 
-  # Attributes processor for data transformation
-  attributes:
-    enabled: false
-    actions:
-      - key: "environment"
-        action: "insert"
-        value: "production"
+  resource:
+    attributes:
+      - key: service.namespace
+        value: {{.ServiceName}}
+        action: upsert
+      - key: deployment.environment
+        value: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
+        action: upsert
 
-# Exporters - where telemetry data is sent
+# =============================================================================
+# CONNECTORS - Pipeline bridging for Exemplars and derived metrics
+# =============================================================================
+connectors:
+  spanmetrics:
+    histogram:
+      explicit:
+        buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+    dimensions:
+      - name: http.method
+        default: GET
+      - name: http.status_code
+      - name: http.route
+      - name: rpc.method
+      - name: rpc.service
+    exemplars:
+      enabled: true
+    namespace: traces
+    metrics_flush_interval: 15s
+
+  servicegraph:
+    latency_histogram_buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+    dimensions:
+      - http.method
+      - http.status_code
+    store:
+      ttl: 2s
+      max_items: 1000
+    cache_loop: 1s
+    store_expiration_loop: 2s
+    virtual_node_peer_attributes:
+      - db.system
+      - messaging.system
+      - rpc.service
+
+# =============================================================================
+# EXPORTERS - Where telemetry data is sent
+# =============================================================================
 exporters:
-  # OTLP exporter for forwarding to other collectors/backends
-  otlp:
-    enabled: false
-    endpoint: "backend:4317"
-    tls:
-      enabled: false
-    headers:
-      X-API-Key: ""
-    compression: "gzip"
-    timeout: 30s
-    retry_on_failure:
-      enabled: true
-      initial_interval: 5s
-      max_interval: 30s
-      max_elapsed_time: 300s
-    sending_queue:
-      enabled: true
-      num_consumers: 10
-      queue_size: 1000
-
-  # Prometheus exporter for metrics scraping
-  prometheus:
-    enabled: false
-    endpoint: "0.0.0.0:8888"
-    namespace: "{{.ServiceName | replace "-" "_"}}"
-    const_labels:
-      collector: "tfo-collector"
-    send_timestamps: true
-    metric_expiration: 5m
-    resource_to_telemetry_conversion: true
-
-  # Logging exporter for debugging
-  logging:
-    enabled: true
-    loglevel: "info"
+  debug:
+    verbosity: detailed
     sampling_initial: 5
     sampling_thereafter: 200
 
-  # File exporter for local storage
-  file:
-    enabled: false
-    path: "/var/lib/tfo-collector/output.json"
-    format: "json"  # json or proto
-    compression: "none"  # none or gzip
-    flush_interval: 1s
-    rotation:
-      max_megabytes: 100
-      max_days: 7
-      max_backups: 3
-      localtime: true
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: {{.ServiceName | replace "-" "_"}}
+    const_labels:
+      collector: tfo-collector
+    send_timestamps: true
+    metric_expiration: 5m
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
 
-# Pipelines - connect receivers, processors, and exporters
-pipelines:
-  metrics:
-    receivers:
-      - otlp
-    processors:
-      - memory_limiter
-      - batch
-    exporters:
-      - logging
+  # OTLP exporter to Jaeger (uncomment to enable)
+  # otlp/jaeger:
+  #   endpoint: "jaeger:4317"
+  #   tls:
+  #     insecure: true
 
-  logs:
-    receivers:
-      - otlp
-    processors:
-      - memory_limiter
-      - batch
-    exporters:
-      - logging
+  # OTLP exporter to TelemetryFlow backend (uncomment to enable)
+  # otlp/tfo:
+  #   endpoint: "${TELEMETRYFLOW_ENDPOINT:-localhost:4317}"
+  #   tls:
+  #     insecure: false
+  #   headers:
+  #     X-TelemetryFlow-Key-ID: "${TELEMETRYFLOW_API_KEY_ID}"
+  #     X-TelemetryFlow-Key-Secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+  #   compression: gzip
+  #   timeout: 30s
 
-  traces:
-    receivers:
-      - otlp
-    processors:
-      - memory_limiter
-      - batch
-    exporters:
-      - logging
-
-# Extensions - additional collector capabilities
+# =============================================================================
+# EXTENSIONS - Additional collector capabilities
+# =============================================================================
 extensions:
-  # Health check extension
   health_check:
-    enabled: true
     endpoint: "0.0.0.0:13133"
-    path: "/"
 
-  # zPages extension for debugging
   zpages:
-    enabled: false
     endpoint: "0.0.0.0:55679"
 
-  # pprof extension for profiling
   pprof:
-    enabled: false
     endpoint: "0.0.0.0:1777"
-    block_profile_fraction: 0
-    mutex_profile_fraction: 0
 
-# Logging configuration
-logging:
-  # Log level: debug, info, warn, error
-  level: "info"
-
-  # Log format: json or text
-  format: "json"
-
-  # Log file path (empty = stdout)
-  file: ""
-
-  # Log rotation settings
-  max_size_mb: 100
-  max_backups: 3
-  max_age_days: 7
-
-  # Development mode (more verbose, human-readable)
-  development: false
-
-  # Log sampling (for high-volume production)
-  sampling:
-    enabled: true
-    initial: 100
-    thereafter: 100
-
+# =============================================================================
+# SERVICE - Defines active components and pipelines
+# =============================================================================
 service:
   extensions: [health_check, zpages, pprof]
 
   pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug, spanmetrics, servicegraph]
+
     metrics:
       receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug, prometheus]
+
+    metrics/spanmetrics:
+      receivers: [spanmetrics]
       processors: [memory_limiter, batch]
-      exporters: [debug]
+      exporters: [prometheus]
+
+    metrics/servicegraph:
+      receivers: [servicegraph]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
 
     logs:
       receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [debug]
-
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
+      processors: [memory_limiter, batch, resource]
       exporters: [debug]
 
   telemetry:
     logs:
       level: info
       encoding: json
+
     metrics:
       level: detailed
-      address: "0.0.0.0:8888"
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888

@@ -33,3 +33,6 @@ tfo-agent.local.yaml
 # Logs
 *.log
 logs/
+
+.claude
+.kiro

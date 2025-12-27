@@ -30,7 +30,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		ProductName: "TelemetryFlow Go SDK",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Motto:       "Community Enterprise Observability Platform (CEOP)",
 		GitCommit:   "unknown",
 		BuildTime:   "unknown",
