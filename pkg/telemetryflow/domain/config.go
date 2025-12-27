@@ -1,3 +1,4 @@
+// Package domain provides core domain types for the TelemetryFlow SDK.
 package domain
 
 import (
@@ -125,31 +126,77 @@ func NewTelemetryConfig(credentials *Credentials, endpoint string, serviceName s
 	}, nil
 }
 
-// Getters for immutability
-func (c *TelemetryConfig) Credentials() *Credentials           { return c.credentials }
-func (c *TelemetryConfig) CollectorID() string                 { return c.collectorID }
-func (c *TelemetryConfig) Endpoint() string                    { return c.endpoint }
-func (c *TelemetryConfig) Protocol() Protocol                  { return c.protocol }
-func (c *TelemetryConfig) IsInsecure() bool                    { return c.insecure }
-func (c *TelemetryConfig) Timeout() time.Duration              { return c.timeout }
-func (c *TelemetryConfig) IsRetryEnabled() bool                { return c.retryEnabled }
-func (c *TelemetryConfig) MaxRetries() int                     { return c.maxRetries }
-func (c *TelemetryConfig) RetryBackoff() time.Duration         { return c.retryBackoff }
-func (c *TelemetryConfig) IsCompressionEnabled() bool          { return c.compressionGzip }
+// Credentials returns the API credentials for TelemetryFlow authentication.
+func (c *TelemetryConfig) Credentials() *Credentials { return c.credentials }
+
+// CollectorID returns the unique identifier for this collector instance.
+func (c *TelemetryConfig) CollectorID() string { return c.collectorID }
+
+// Endpoint returns the OTLP collector endpoint address.
+func (c *TelemetryConfig) Endpoint() string { return c.endpoint }
+
+// Protocol returns the OTLP protocol type (gRPC or HTTP).
+func (c *TelemetryConfig) Protocol() Protocol { return c.protocol }
+
+// IsInsecure returns true if TLS verification is disabled.
+func (c *TelemetryConfig) IsInsecure() bool { return c.insecure }
+
+// Timeout returns the connection timeout duration.
+func (c *TelemetryConfig) Timeout() time.Duration { return c.timeout }
+
+// IsRetryEnabled returns true if automatic retries are enabled.
+func (c *TelemetryConfig) IsRetryEnabled() bool { return c.retryEnabled }
+
+// MaxRetries returns the maximum number of retry attempts.
+func (c *TelemetryConfig) MaxRetries() int { return c.maxRetries }
+
+// RetryBackoff returns the backoff duration between retries.
+func (c *TelemetryConfig) RetryBackoff() time.Duration { return c.retryBackoff }
+
+// IsCompressionEnabled returns true if gzip compression is enabled.
+func (c *TelemetryConfig) IsCompressionEnabled() bool { return c.compressionGzip }
+
+// GRPCKeepalive returns the gRPC keepalive configuration.
 func (c *TelemetryConfig) GRPCKeepalive() *GRPCKeepaliveConfig { return c.grpcKeepalive }
-func (c *TelemetryConfig) GRPCMaxRecvMsgSize() int             { return c.grpcMaxRecvMsgSize }
-func (c *TelemetryConfig) GRPCMaxSendMsgSize() int             { return c.grpcMaxSendMsgSize }
-func (c *TelemetryConfig) GRPCReadBufferSize() int             { return c.grpcReadBufferSize }
-func (c *TelemetryConfig) GRPCWriteBufferSize() int            { return c.grpcWriteBufferSize }
-func (c *TelemetryConfig) ServiceName() string                 { return c.serviceName }
-func (c *TelemetryConfig) ServiceNamespace() string            { return c.serviceNamespace }
-func (c *TelemetryConfig) ServiceVersion() string              { return c.serviceVersion }
-func (c *TelemetryConfig) Environment() string                 { return c.environment }
+
+// GRPCMaxRecvMsgSize returns the maximum gRPC receive message size in bytes.
+func (c *TelemetryConfig) GRPCMaxRecvMsgSize() int { return c.grpcMaxRecvMsgSize }
+
+// GRPCMaxSendMsgSize returns the maximum gRPC send message size in bytes.
+func (c *TelemetryConfig) GRPCMaxSendMsgSize() int { return c.grpcMaxSendMsgSize }
+
+// GRPCReadBufferSize returns the gRPC read buffer size in bytes.
+func (c *TelemetryConfig) GRPCReadBufferSize() int { return c.grpcReadBufferSize }
+
+// GRPCWriteBufferSize returns the gRPC write buffer size in bytes.
+func (c *TelemetryConfig) GRPCWriteBufferSize() int { return c.grpcWriteBufferSize }
+
+// ServiceName returns the name of the instrumented service.
+func (c *TelemetryConfig) ServiceName() string { return c.serviceName }
+
+// ServiceNamespace returns the namespace of the instrumented service.
+func (c *TelemetryConfig) ServiceNamespace() string { return c.serviceNamespace }
+
+// ServiceVersion returns the version of the instrumented service.
+func (c *TelemetryConfig) ServiceVersion() string { return c.serviceVersion }
+
+// Environment returns the deployment environment (e.g., production, staging).
+func (c *TelemetryConfig) Environment() string { return c.environment }
+
+// CustomAttributes returns the custom attributes to add to all telemetry data.
 func (c *TelemetryConfig) CustomAttributes() map[string]string { return c.customAttributes }
-func (c *TelemetryConfig) BatchTimeout() time.Duration         { return c.batchTimeout }
-func (c *TelemetryConfig) BatchMaxSize() int                   { return c.batchMaxSize }
-func (c *TelemetryConfig) RateLimit() int                      { return c.rateLimit }
-func (c *TelemetryConfig) IsExemplarsEnabled() bool            { return c.exemplarsEnabled }
+
+// BatchTimeout returns the batch export timeout duration.
+func (c *TelemetryConfig) BatchTimeout() time.Duration { return c.batchTimeout }
+
+// BatchMaxSize returns the maximum batch size for export.
+func (c *TelemetryConfig) BatchMaxSize() int { return c.batchMaxSize }
+
+// RateLimit returns the rate limit for telemetry data export.
+func (c *TelemetryConfig) RateLimit() int { return c.rateLimit }
+
+// IsExemplarsEnabled returns true if exemplars are enabled for metrics-to-traces correlation.
+func (c *TelemetryConfig) IsExemplarsEnabled() bool { return c.exemplarsEnabled }
 
 // IsSignalEnabled checks if a signal type is enabled
 func (c *TelemetryConfig) IsSignalEnabled(signal SignalType) bool {

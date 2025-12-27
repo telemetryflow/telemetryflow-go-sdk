@@ -1,3 +1,6 @@
+// Package application provides the application layer for the TelemetryFlow SDK.
+// This package implements CQRS (Command Query Responsibility Segregation) patterns
+// with commands, queries, and their respective handlers.
 package application
 
 import (

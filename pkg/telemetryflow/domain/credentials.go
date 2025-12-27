@@ -1,3 +1,6 @@
+// Package domain provides core domain types for the TelemetryFlow SDK.
+// This package implements Domain-Driven Design (DDD) patterns including
+// value objects, entities, and domain services for telemetry configuration.
 package domain
 
 import (
