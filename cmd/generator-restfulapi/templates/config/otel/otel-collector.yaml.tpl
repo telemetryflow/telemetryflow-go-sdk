@@ -85,6 +85,43 @@ processors:
   #       value: production
 
 # =============================================================================
+# CONNECTORS - Pipeline bridging for Exemplars and derived metrics
+# =============================================================================
+connectors:
+  # Span metrics connector - derives metrics from traces with EXEMPLARS support
+  spanmetrics:
+    histogram:
+      explicit:
+        buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+    dimensions:
+      - name: http.method
+        default: GET
+      - name: http.status_code
+      - name: http.route
+      - name: rpc.method
+      - name: rpc.service
+    exemplars:
+      enabled: true
+    namespace: traces
+    metrics_flush_interval: 15s
+
+  # Service graph connector - builds service dependency graphs from traces
+  servicegraph:
+    latency_histogram_buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+    dimensions:
+      - http.method
+      - http.status_code
+    store:
+      ttl: 2s
+      max_items: 1000
+    cache_loop: 1s
+    store_expiration_loop: 2s
+    virtual_node_peer_attributes:
+      - db.system
+      - messaging.system
+      - rpc.service
+
+# =============================================================================
 # EXPORTERS - Where telemetry data is sent
 # =============================================================================
 exporters:
@@ -94,7 +131,7 @@ exporters:
     sampling_initial: 5
     sampling_thereafter: 200
 
-  # Prometheus exporter for metrics scraping
+  # Prometheus exporter for metrics scraping (with exemplars support)
   prometheus:
     endpoint: "0.0.0.0:8889"
     namespace: {{.ServiceName | replace "-" "_"}}
@@ -102,6 +139,7 @@ exporters:
       collector: tfo-collector
     send_timestamps: true
     metric_expiration: 5m
+    enable_open_metrics: true
     resource_to_telemetry_conversion:
       enabled: true
 
@@ -165,23 +203,36 @@ service:
   extensions: [health_check, zpages, pprof]
 
   pipelines:
-    # Metrics pipeline
+    # Traces pipeline - receives traces, exports to debug, Jaeger, and connectors
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug, otlp/jaeger, spanmetrics, servicegraph]
+
+    # Metrics pipeline - receives metrics from OTLP
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
       exporters: [debug, prometheus]
+
+    # Metrics from traces pipeline - receives derived metrics from spanmetrics connector
+    # These metrics include EXEMPLARS for correlation with traces
+    metrics/spanmetrics:
+      receivers: [spanmetrics]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+
+    # Metrics from service graph - receives service dependency metrics
+    metrics/servicegraph:
+      receivers: [servicegraph]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
 
     # Logs pipeline
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch, resource]
       exporters: [debug]
-
-    # Traces pipeline
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch, resource]
-      exporters: [debug, otlp/jaeger]
 
   # Internal telemetry configuration
   telemetry:
@@ -191,3 +242,9 @@ service:
 
     metrics:
       level: detailed
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: "0.0.0.0"
+                port: 8888
