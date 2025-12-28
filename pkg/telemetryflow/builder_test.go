@@ -5,7 +5,6 @@
 package telemetryflow
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -180,10 +179,8 @@ func TestBuilder_WithExemplars(t *testing.T) {
 
 func TestBuilder_WithAPIKeyFromEnv(t *testing.T) {
 	t.Run("should read API key from environment", func(t *testing.T) {
-		os.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env")
-		os.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret")
-		defer os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-		defer os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
+		t.Setenv("TELEMETRYFLOW_API_KEY_ID", "tfk_env")
+		t.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "tfs_env_secret")
 
 		builder := NewBuilder().WithAPIKeyFromEnv()
 
@@ -193,8 +190,9 @@ func TestBuilder_WithAPIKeyFromEnv(t *testing.T) {
 	})
 
 	t.Run("should add error when env vars not set", func(t *testing.T) {
-		os.Unsetenv("TELEMETRYFLOW_API_KEY_ID")
-		os.Unsetenv("TELEMETRYFLOW_API_KEY_SECRET")
+		// Ensure env vars are not set by using empty values
+		t.Setenv("TELEMETRYFLOW_API_KEY_ID", "")
+		t.Setenv("TELEMETRYFLOW_API_KEY_SECRET", "")
 
 		builder := NewBuilder().WithAPIKeyFromEnv()
 

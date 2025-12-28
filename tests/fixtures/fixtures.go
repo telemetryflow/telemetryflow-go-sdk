@@ -1,10 +1,3 @@
-// =============================================================================
-// Test Fixtures - Package Documentation & Helpers
-// =============================================================================
-//
-// TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-// Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
-//
 // Package fixtures provides test data and utilities for testing the
 // TelemetryFlow Go SDK. It includes sample data for:
 //
@@ -14,8 +7,8 @@
 //   - Templates: Code generator template data
 //   - Responses: Mock HTTP/gRPC responses
 //
-// =============================================================================
-
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
+// Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
 package fixtures
 
 import (

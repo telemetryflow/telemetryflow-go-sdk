@@ -40,7 +40,6 @@ func TestNewTelemetryCommandHandler(t *testing.T) {
 	})
 }
 
-
 func TestTelemetryCommandHandler_ShutdownNotInitialized(t *testing.T) {
 	t.Run("should fail shutdown when not initialized", func(t *testing.T) {
 		config := createTestConfig(t)
