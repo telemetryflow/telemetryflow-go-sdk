@@ -1,3 +1,6 @@
+// Package telemetryflow provides the main SDK interface for TelemetryFlow.
+// This package offers a fluent builder pattern for creating telemetry clients
+// that export traces, metrics, and logs to TelemetryFlow collectors using OTLP.
 package telemetryflow
 
 import (

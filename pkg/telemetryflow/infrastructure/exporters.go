@@ -1,3 +1,6 @@
+// Package infrastructure provides OTLP exporter implementations for the TelemetryFlow SDK.
+// This package contains factories and handlers for creating gRPC and HTTP exporters
+// that communicate with OpenTelemetry collectors using the OTLP protocol.
 package infrastructure
 
 import (

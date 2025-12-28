@@ -100,7 +100,8 @@ jobs:
         with:
           version: v2.7.2
           args: --timeout=5m
-          skip-cache: false
+          skip-cache: true
+          verify: false
 
   # ===========================================================================
   # Unit Tests
