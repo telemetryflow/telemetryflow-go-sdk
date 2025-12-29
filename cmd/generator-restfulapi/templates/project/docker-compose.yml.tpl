@@ -139,7 +139,7 @@ services:
 {{- end}}
 
 {{- if .EnableTelemetry}}
-      # TelemetryFlow / OpenTelemetry (SDK v1.1.0+)
+      # TelemetryFlow / OpenTelemetry (SDK v1.1.1+)
       - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID}
       - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET}
       - TELEMETRYFLOW_ENDPOINT=otel-collector:4317

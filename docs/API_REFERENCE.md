@@ -125,7 +125,7 @@ func NewFromEnv() (*Client, error)
 | `TELEMETRYFLOW_API_KEY_SECRET` | Yes | - | API key secret (format: `tfs_...`) |
 | `TELEMETRYFLOW_ENDPOINT` | No | `api.telemetryflow.id:4317` | OTLP endpoint |
 | `TELEMETRYFLOW_SERVICE_NAME` | No | `unknown-service` | Service name |
-| `TELEMETRYFLOW_SERVICE_VERSION` | No | `1.0.0` | Service version |
+| `TELEMETRYFLOW_SERVICE_VERSION` | No | `1.1.1` | Service version |
 | `ENV` or `ENVIRONMENT` | No | `production` | Deployment environment |
 
 **Example:**

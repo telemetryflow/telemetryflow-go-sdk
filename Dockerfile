@@ -27,7 +27,7 @@
 FROM golang:1.24-alpine AS builder
 
 # Build arguments
-ARG VERSION=1.1.0
+ARG VERSION=1.1.1
 ARG GIT_COMMIT=unknown
 ARG GIT_BRANCH=unknown
 ARG BUILD_TIME=unknown
@@ -77,7 +77,7 @@ FROM alpine:3.21
 # =============================================================================
 LABEL org.opencontainers.image.title="TelemetryFlow Go SDK" \
       org.opencontainers.image.description="Go SDK and code generators for TelemetryFlow integration - Community Enterprise Observability Platform (CEOP)" \
-      org.opencontainers.image.version="1.1.0" \
+      org.opencontainers.image.version="1.1.1" \
       org.opencontainers.image.vendor="TelemetryFlow" \
       org.opencontainers.image.authors="DevOpsCorner Indonesia <support@devopscorner.id>" \
       org.opencontainers.image.url="https://telemetryflow.id" \
@@ -126,19 +126,19 @@ CMD ["--help"]
 # =============================================================================
 # Build with:
 #   docker build \
-#     --build-arg VERSION=1.1.0 \
+#     --build-arg VERSION=1.1.1 \
 #     --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) \
 #     --build-arg GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
 #     --build-arg BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ') \
-#     -t telemetryflow/telemetryflow-sdk:1.0.0 .
+#     -t telemetryflow/telemetryflow-sdk:1.1.1 .
 #
 # Run with:
 #   # SDK Generator
-#   docker run --rm -v $(pwd):/workspace telemetryflow/telemetryflow-sdk:1.0.0 \
+#   docker run --rm -v $(pwd):/workspace telemetryflow/telemetryflow-sdk:1.1.1 \
 #     init --project myapp --service my-service
 #
 #   # RESTful API Generator
 #   docker run --rm -v $(pwd):/workspace --entrypoint /usr/local/bin/telemetryflow-restapi \
-#     telemetryflow/telemetryflow-sdk:1.0.0 \
+#     telemetryflow/telemetryflow-sdk:1.1.1 \
 #     new --name my-api --module github.com/example/my-api
 # =============================================================================
