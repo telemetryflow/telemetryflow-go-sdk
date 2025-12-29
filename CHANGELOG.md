@@ -11,7 +11,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OTLP-100%25%20Compliant-green" alt="OTLP Compliant"></a>
   <a href="https://hub.docker.com/r/telemetryflow/telemetryflow-sdk"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.1-orange.svg" alt="Version"></a>
 </p>
 
 <p align="center">
@@ -26,6 +26,34 @@ All notable changes to the TelemetryFlow Go SDK will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.1.1] - 2024-12-30
+
+### Added
+
+- **Comprehensive Unit Tests**: Added unit tests for all DDD layers following external test package pattern
+  - `tests/unit/domain/` - Credentials and Config domain tests
+  - `tests/unit/application/` - Command and Query tests
+  - `tests/unit/infrastructure/` - Template, HTTP, Database tests
+  - `tests/unit/client/` - Client and Builder tests
+  - `tests/unit/generator/` - Generator and REST API generator tests
+  - `tests/unit/version/` - Version information tests
+  - `tests/unit/banner/` - Banner display tests
+
+### Changed
+
+- **Documentation**: Updated docs structure to match TelemetryFlow Collector format
+  - Added `docs/README.md` - Documentation index
+  - Added `docs/TESTING.md` - Comprehensive testing guide
+  - Added `docs/BUILD-SYSTEM.md` - Build system documentation
+  - Updated `docs/ARCHITECTURE.md` - Added version header and DDD layer details
+
+### Fixed
+
+- **Linting**: Fixed ST1000 package comment errors for test packages
+- **Test Utils**: Changed from `os.Setenv`/`os.Unsetenv` to `t.Setenv` for proper test cleanup
+
+---
 
 ## [1.1.0] - 2024-12-27
 
@@ -409,6 +437,7 @@ None at this time.
 
 ---
 
+[1.1.1]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/telemetryflow/telemetryflow-go-sdk/releases/tag/v1.0.0

@@ -1,5 +1,12 @@
 # TelemetryFlow Go SDK - Architecture
 
+Domain-Driven Design (DDD) architecture guide for the TelemetryFlow Go SDK.
+
+- **Version:** 1.1.1
+- **Last Updated:** December 2025
+
+---
+
 This document explains the architectural decisions and patterns used in the TelemetryFlow Go SDK.
 
 ## Table of Contents

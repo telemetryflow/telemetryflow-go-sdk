@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"testing"
 )
 
 // FixturesDir returns the path to the fixtures directory
@@ -89,8 +90,18 @@ func CreateTempConfigFile(filename, content string) (string, func(), error) {
 	return configPath, cleanup, nil
 }
 
-// SetEnvVars sets environment variables and returns a cleanup function
-func SetEnvVars(vars map[string]string) func() {
+// SetEnvVars sets environment variables using t.Setenv for automatic cleanup.
+// This is race-safe and automatically restores original values after the test.
+func SetEnvVars(t *testing.T, vars map[string]string) {
+	t.Helper()
+	for key, value := range vars {
+		t.Setenv(key, value)
+	}
+}
+
+// SetEnvVarsLegacy sets environment variables and returns a cleanup function.
+// Deprecated: Use SetEnvVars with *testing.T instead for race-safe tests.
+func SetEnvVarsLegacy(vars map[string]string) func() {
 	original := make(map[string]string)
 
 	for key, value := range vars {

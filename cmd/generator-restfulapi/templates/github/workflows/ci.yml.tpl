@@ -61,6 +61,8 @@ env:
   GO_VERSION: '1.24'
   PRODUCT_NAME: {{.ProjectName}}
   BINARY_NAME: {{.ProjectName | lower}}
+  # Bypass Go proxy for TelemetryFlow private modules
+  GOPRIVATE: github.com/telemetryflow/*
 
 permissions:
   contents: read

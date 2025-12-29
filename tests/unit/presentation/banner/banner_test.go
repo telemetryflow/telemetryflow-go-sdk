@@ -18,7 +18,7 @@ func TestDefaultConfig(t *testing.T) {
 		cfg := banner.DefaultConfig()
 
 		assert.Equal(t, "TelemetryFlow Go SDK", cfg.ProductName)
-		assert.Equal(t, "1.1.0", cfg.Version)
+		assert.Equal(t, "1.1.1", cfg.Version)
 		assert.Equal(t, "Community Enterprise Observability Platform (CEOP)", cfg.Motto)
 		assert.Equal(t, "TelemetryFlow", cfg.Vendor)
 		assert.Equal(t, "https://telemetryflow.id", cfg.VendorURL)

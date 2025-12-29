@@ -7,7 +7,7 @@
 
 # Build configuration
 PRODUCT_NAME := TelemetryFlow Go SDK
-VERSION ?= 1.1.0
+VERSION ?= 1.1.1
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
@@ -49,7 +49,7 @@ RED := \033[0;31m
 BLUE := \033[0;34m
 NC := \033[0m
 
-.PHONY: all build build-all build-sdk build-generators build-gen build-restapi clean test test-unit test-integration test-e2e test-all test-coverage test-short bench deps deps-update lint lint-fix fmt vet run-gen run-restapi run-example install uninstall help tidy verify version check ci release-check docs godoc docker-build generate-example generate-restapi-example
+.PHONY: all build build-all build-sdk build-generators build-gen build-restapi build-linux build-darwin clean test test-unit test-integration test-e2e test-all test-coverage test-short bench deps deps-update lint lint-fix fmt vet run-gen run-restapi run-example install uninstall help tidy verify version check ci release-check docs godoc docker-build docker-push generate-example generate-restapi-example
 
 # Default target
 all: build
@@ -66,6 +66,8 @@ help:
 	@echo "  make build-gen        - Build telemetryflow-gen"
 	@echo "  make build-restapi    - Build telemetryflow-restapi"
 	@echo "  make build-all        - Build generators for all platforms"
+	@echo "  make build-linux      - Build generators for Linux (amd64 and arm64)"
+	@echo "  make build-darwin     - Build generators for macOS (amd64 and arm64)"
 	@echo ""
 	@echo "$(YELLOW)Development Commands:$(NC)"
 	@echo "  make run-gen          - Run telemetryflow-gen"
@@ -152,6 +154,24 @@ build-all:
 		GOOS=$${GOOS} GOARCH=$${GOARCH} $(GOBUILD) -ldflags "$(LDFLAGS)" -o $${output} $(RESTAPI_GENERATOR_PATH) ; \
 	done
 	@echo "$(GREEN)All platform builds complete in $(DIST_DIR)$(NC)"
+
+build-linux:
+	@echo "$(GREEN)Building generators for Linux...$(NC)"
+	@mkdir -p $(DIST_DIR)
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(GENERATOR_NAME)-linux-amd64 $(GENERATOR_PATH)
+	@GOOS=linux GOARCH=arm64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(GENERATOR_NAME)-linux-arm64 $(GENERATOR_PATH)
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-linux-amd64 $(RESTAPI_GENERATOR_PATH)
+	@GOOS=linux GOARCH=arm64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-linux-arm64 $(RESTAPI_GENERATOR_PATH)
+	@echo "$(GREEN)Linux builds complete$(NC)"
+
+build-darwin:
+	@echo "$(GREEN)Building generators for macOS...$(NC)"
+	@mkdir -p $(DIST_DIR)
+	@GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(GENERATOR_NAME)-darwin-amd64 $(GENERATOR_PATH)
+	@GOOS=darwin GOARCH=arm64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(GENERATOR_NAME)-darwin-arm64 $(GENERATOR_PATH)
+	@GOOS=darwin GOARCH=amd64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-darwin-amd64 $(RESTAPI_GENERATOR_PATH)
+	@GOOS=darwin GOARCH=arm64 $(GOBUILD) -ldflags "$(LDFLAGS)" -o $(DIST_DIR)/$(RESTAPI_GENERATOR_NAME)-darwin-arm64 $(RESTAPI_GENERATOR_PATH)
+	@echo "$(GREEN)macOS builds complete$(NC)"
 
 ## Development commands
 run-gen: build-gen

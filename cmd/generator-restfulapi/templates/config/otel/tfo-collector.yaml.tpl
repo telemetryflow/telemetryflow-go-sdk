@@ -1,14 +1,16 @@
 # =============================================================================
-# TelemetryFlow Collector Configuration
+# TelemetryFlow Collector Configuration (Standalone)
 # =============================================================================
 # {{.ProjectName}} - Community Enterprise Observability Platform (CEOP)
 # Copyright (c) 2024-2026 TelemetryFlow. All rights reserved.
 #
-# This configuration uses STANDARD OpenTelemetry Collector format for
-# compatibility with both build types:
+# This configuration is for the TelemetryFlow Standalone binary only:
 #
-#   - Standalone: ./tfo-collector start --config tfo-collector.yaml
-#   - OCB:        ./tfo-collector-ocb --config tfo-collector.yaml
+#   Usage: ./tfo-collector start --config tfo-collector.yaml
+#
+# For OCB builds, use otel-collector.yaml instead:
+#
+#   Usage: ./tfo-collector-ocb --config otel-collector.yaml
 #
 # Copy to: /etc/tfo-collector/tfo-collector.yaml or ~/.tfo-collector/
 #
@@ -22,28 +24,47 @@
 #   TELEMETRYFLOW_COLLECTOR_NAME  - Human-readable collector name (optional)
 #   TELEMETRYFLOW_ENVIRONMENT     - Deployment environment (optional)
 #
+# Example .env file:
+#   TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id
+#   TELEMETRYFLOW_API_KEY_SECRET=tfs_your_key_secret
+#   TELEMETRYFLOW_ENDPOINT=collector.telemetryflow.id:4317
+#
 # =============================================================================
 
 # =============================================================================
-# TelemetryFlow Extensions (Standalone-specific, ignored by OCB)
+# TelemetryFlow Extensions (Standalone-specific)
 # =============================================================================
+# These sections are TelemetryFlow-specific for collector identification
+# and backend authentication. Only used by the Standalone binary.
+
 telemetryflow:
+  # API Key ID (format: tfk_xxx) - used for collector identification
   api_key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  # API Key Secret (format: tfs_xxx) - used for authentication
   api_key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+  # TelemetryFlow backend endpoint for sending telemetry
   endpoint: "${TELEMETRYFLOW_ENDPOINT:-localhost:4317}"
+  # TLS settings for backend connection
   tls:
     enabled: true
     insecure_skip_verify: false
 
+# Collector identification
 collector:
+  # Unique collector identifier (auto-generated if empty)
   id: "${TELEMETRYFLOW_COLLECTOR_ID}"
+  # Collector hostname (auto-detected if empty)
   hostname: ""
+  # Human-readable collector name
   name: "${TELEMETRYFLOW_COLLECTOR_NAME:-{{.ProjectName}} Collector}"
+  # Human-readable description
   description: "{{.ProjectName}} - TelemetryFlow Collector"
+  # Collector version (auto-populated at build time)
   version: ""
+  # Custom tags for labeling and filtering
   tags:
     environment: "${TELEMETRYFLOW_ENVIRONMENT:-production}"
-    datacenter: "default"
+    datacenter: "tfo-collector"
     service: "{{.ServiceName}}"
 
 # =============================================================================

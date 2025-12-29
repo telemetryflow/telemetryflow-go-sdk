@@ -10,6 +10,9 @@ networks:
   {{.ProjectName | lower}}_net:
     name: {{.ProjectName | lower}}_net
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.152.0.0/16
 
 #================================================================================================
 # VOLUME SETUP
@@ -48,7 +51,8 @@ services:
     volumes:
       - vol_postgres_data:/var/lib/postgresql/data
     networks:
-      - {{.ProjectName | lower}}_net
+      {{.ProjectName | lower}}_net:
+        ipv4_address: ${CONTAINER_IP_POSTGRES:-172.152.152.20}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-{{.DBUser}}} -d ${DB_NAME:-{{.DBName}}}"]
       interval: 10s
@@ -73,7 +77,8 @@ services:
     volumes:
       - vol_mysql_data:/var/lib/mysql
     networks:
-      - {{.ProjectName | lower}}_net
+      {{.ProjectName | lower}}_net:
+        ipv4_address: ${CONTAINER_IP_MYSQL:-172.152.152.20}
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -162,7 +167,8 @@ services:
         condition: service_started
 {{- end}}
     networks:
-      - {{.ProjectName | lower}}_net
+      {{.ProjectName | lower}}_net:
+        ipv4_address: ${CONTAINER_IP_API:-172.152.152.10}
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:{{.ServerPort}}/health || exit 1"]
       interval: 30s
@@ -179,24 +185,25 @@ services:
     platform: linux/amd64
     # =============================================================================
     # OTEL Collector Community Contributor (Standard OTEL format)
-    image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
-    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
+    # command: ["--config=/etc/otelcol-contrib/config.yaml"]
     # =============================================================================
     # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
-    # image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-0.142.0}
-    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    image: telemetryflow/telemetryflow-collector-ocb:${OTEL_VERSION:-latest}
+    command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
     # =============================================================================
     # TelemetryFlow Collector (TFO-Collector) - Custom TFO format (OTLP not implemented yet)
-    # image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-0.142.0}
+    # image: telemetryflow/telemetryflow-collector:${OTEL_VERSION:-latest}
+    # command: ["--config=/etc/tfo-collector/tfo-collector.yaml"]
     # =============================================================================
     container_name: ${CONTAINER_OTEL:-{{.ProjectName | lower}}_otel}
     restart: unless-stopped
     volumes:
       # OTEL Collector Community Contributor config
-      - ./configs/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      # - ./configs/otel/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
       # =============================================================================
       # TelemetryFlow Collector OCB config (Standard OTEL format)
-      # - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
+      - ./configs/otel/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
       # =============================================================================
       # TelemetryFlow Collector config (Custom TFO format)
       # - ./configs/otel/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
@@ -206,7 +213,8 @@ services:
       - "${PORT_OTEL_METRICS:-8889}:8889"  # Prometheus metrics
       - "${PORT_OTEL_HEALTH:-13133}:13133" # Health check
     networks:
-      - {{.ProjectName | lower}}_net
+      {{.ProjectName | lower}}_net:
+        ipv4_address: ${CONTAINER_IP_OTEL:-172.152.152.30}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
       interval: 10s
@@ -230,7 +238,8 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
-      - {{.ProjectName | lower}}_net
+      {{.ProjectName | lower}}_net:
+        ipv4_address: ${CONTAINER_IP_JAEGER:-172.152.152.40}
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
       interval: 10s

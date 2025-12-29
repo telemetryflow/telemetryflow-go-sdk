@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
   <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OTLP-100%25%20Compliant-green" alt="OTLP Compliant"></a>
   <a href="https://hub.docker.com/r/telemetryflow/telemetryflow-sdk"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.0-blue.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.1-orange.svg" alt="Version"></a>
 </p>
 
 <p align="center">
@@ -59,7 +59,7 @@ TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id_here
 TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret_here
 TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317
 TELEMETRYFLOW_SERVICE_NAME=my-go-service
-TELEMETRYFLOW_SERVICE_VERSION=1.1.0
+TELEMETRYFLOW_SERVICE_VERSION=1.1.1
 TELEMETRYFLOW_SERVICE_NAMESPACE=telemetryflow
 TELEMETRYFLOW_COLLECTOR_ID=my-collector-id
 ENV=production
@@ -368,7 +368,7 @@ config.WithMetricsOnly()
 config.WithTracesOnly()
 ```
 
-### Exemplars Support (v1.1.0+)
+### Exemplars Support (v1.1.1+)
 
 Exemplars enable metrics-to-traces correlation for powerful debugging:
 
@@ -380,7 +380,7 @@ client := telemetryflow.NewBuilder().
     MustBuild()
 ```
 
-### Service Namespace (v1.1.0+)
+### Service Namespace (v1.1.1+)
 
 ```go
 // Set service namespace for multi-tenant environments
@@ -390,7 +390,7 @@ client := telemetryflow.NewBuilder().
     MustBuild()
 ```
 
-### Collector ID (v1.1.0+)
+### Collector ID (v1.1.1+)
 
 ```go
 // Set collector ID for TelemetryFlow backend authentication
