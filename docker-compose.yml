@@ -10,13 +10,16 @@
 #   docker-compose build
 #
 #   # Run SDK generator (init command)
-#   docker-compose run --rm sdk-gen init --project myapp --service my-service
+#   docker-compose run --rm sdk-gen init --project myapp --service my-service --output /workspace
 #
 #   # Run RESTful API generator
 #   docker-compose run --rm sdk-restapi new --name my-api
 #
 #   # Start development environment with observability stack
-#   docker-compose up -d otel-collector jaeger
+#   docker-compose --profile dev up -d otel-collector jaeger
+#
+#   # Start full observability stack
+#   docker-compose --profile full up -d
 #
 # =============================================================================
 
@@ -25,8 +28,8 @@ services:
   # SDK Generator
   # ---------------------------------------------------------------------------
   sdk-gen:
-    container_name: ${CONTAINER_NAME:-telemetryflow-sdk-gen}
-    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-sdk}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME:-telemetryflow-go-sdk-gen}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -47,8 +50,8 @@ services:
   # RESTful API Generator
   # ---------------------------------------------------------------------------
   sdk-restapi:
-    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-sdk-restapi}
-    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-sdk}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-go-sdk-restapi}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -59,11 +62,58 @@ services:
         BUILD_TIME: ${BUILD_TIME:-unknown}
     entrypoint: ["/usr/local/bin/telemetryflow-restapi"]
     command: ["--help"]
+    environment:
+      - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID:-tfk_example}
+      - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET:-tfs_example}
+      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-otel-collector:4317}
+      - TELEMETRYFLOW_SERVICE_NAME=${TELEMETRYFLOW_SERVICE_NAME:-telemetryflow-go-sdk}
+      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.0.0}
+      - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
     volumes:
       - ./workspace:/workspace
     working_dir: /workspace
+    depends_on:
+      otel-collector:
+        condition: service_healthy
     networks:
       - telemetryflow-sdk
+    profiles:
+      - example
+
+  # ---------------------------------------------------------------------------
+  # SDK Development Container
+  # ---------------------------------------------------------------------------
+  sdk-dev:
+    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-go-sdk-dev}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        VERSION: ${VERSION:-dev}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+    entrypoint: ["/usr/local/bin/telemetryflow-restapi"]
+    command: ["--help"]
+    environment:
+      - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID:-tfk_example}
+      - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET:-tfs_example}
+      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-otel-collector:4317}
+      - TELEMETRYFLOW_SERVICE_NAME=${TELEMETRYFLOW_SERVICE_NAME:-telemetryflow-go-sdk-dev}
+      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.0.0}
+      - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
+    volumes:
+      - .:/app
+      - ./workspace:/workspace
+    working_dir: /app
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - telemetryflow-sdk
+    profiles:
+      - dev
 
   # ---------------------------------------------------------------------------
   # OpenTelemetry Collector (for local development)
@@ -73,10 +123,10 @@ services:
     image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
     command: ["--config=/etc/otel/config.yaml"]
     ports:
-      - "${OTLP_GRPC_PORT:-4317}:4317"   # OTLP gRPC
-      - "${OTLP_HTTP_PORT:-4318}:4318"   # OTLP HTTP
-      - "${OTEL_METRICS_PORT:-8888}:8888"   # Prometheus metrics
-      - "${OTEL_HEALTH_PORT:-13133}:13133"  # Health check
+      - "${OTLP_GRPC_PORT:-4317}:4317"     # OTLP gRPC
+      - "${OTLP_HTTP_PORT:-4318}:4318"     # OTLP HTTP
+      - "${OTEL_METRICS_PORT:-8888}:8888"  # Prometheus metrics
+      - "${OTEL_HEALTH_PORT:-13133}:13133" # Health check
     volumes:
       - ./configs/otel-collector.yaml:/etc/otel/config.yaml:ro
     healthcheck:
@@ -89,17 +139,18 @@ services:
     profiles:
       - dev
       - full
+      - example
 
   # ---------------------------------------------------------------------------
   # Jaeger (for trace visualization)
   # ---------------------------------------------------------------------------
   jaeger:
     container_name: jaeger-dev
-    image: jaegertracing/all-in-one:1.52
+    image: jaegertracing/all-in-one:${JAEGER_VERSION:-1.64}
     ports:
-      - "${JAEGER_UI_PORT:-16686}:16686"     # Jaeger UI
-      - "${JAEGER_HTTP_PORT:-14268}:14268"   # Jaeger HTTP collector
-      - "${JAEGER_GRPC_PORT:-14250}:14250"   # Jaeger gRPC
+      - "${JAEGER_UI_PORT:-16686}:16686"   # Jaeger UI
+      - "${JAEGER_HTTP_PORT:-14268}:14268" # Jaeger HTTP collector
+      - "${JAEGER_GRPC_PORT:-14250}:14250" # Jaeger gRPC
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
@@ -113,7 +164,7 @@ services:
   # ---------------------------------------------------------------------------
   prometheus:
     container_name: prometheus-dev
-    image: prom/prometheus:v2.48.0
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.54.1}
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
@@ -133,7 +184,7 @@ services:
   # ---------------------------------------------------------------------------
   grafana:
     container_name: grafana-dev
-    image: grafana/grafana:10.2.2
+    image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
@@ -163,4 +214,4 @@ volumes:
 networks:
   telemetryflow-sdk:
     driver: bridge
-    name: telemetryflow-sdk-network
+    name: telemetryflow-go-sdk-network
