@@ -1,20 +1,20 @@
-# TelemetryFlow Go SDK
-
-<p align="center">
+<div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tfo-logo-sdk-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="docs/assets/tfo-logo-sdk-light.svg">
-    <img alt="TelemetryFlow SDK Logo" src="docs/assets/tfo-logo-sdk-light.svg" width="80%">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/telemetryflow/.github/raw/main/docs/assets/tfo-logo-sdk-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/telemetryflow/.github/raw/main/docs/assets/tfo-logo-sdk-light.svg">
+    <img src="https://github.com/telemetryflow/.github/raw/main/docs/assets/tfo-logo-sdk-light.svg" alt="TelemetryFlow Logo" width="80%">
   </picture>
-</p>
 
-<p align="center">
-  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.24+-00ADD8?style=flat&logo=go" alt="Go Version"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
-  <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OTLP-100%25%20Compliant-green" alt="OTLP Compliant"></a>
-  <a href="https://hub.docker.com/r/telemetryflow/telemetryflow-sdk"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker" alt="Docker"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Version-1.1.1-orange.svg" alt="Version"></a>
-</p>
+  <h3>TelemetryFlow GO SDK</h3>
+
+[![Version](https://img.shields.io/badge/Version-1.1.1-orange.svg)](CHANGELOG.md)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
+[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
+[![OpenTelemetry](https://img.shields.io/badge/OTLP-100%25%20Compliant-success?logo=opentelemetry)](https://opentelemetry.io/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://hub.docker.com/r/telemetryflow/telemetryflow-sdk)
+
+</div>
 
 <p align="center">
   Enterprise-grade Go SDK for <a href="https://telemetryflow.id">TelemetryFlow</a> - the observability platform that provides unified metrics, logs, and traces collection following OpenTelemetry standards.
