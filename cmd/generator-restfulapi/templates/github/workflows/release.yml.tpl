@@ -492,7 +492,7 @@ jobs:
   docker-release:
     name: Docker Release
     runs-on: ubuntu-latest
-    needs: [prepare, test]
+    needs: [prepare, release]
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{"{{"}} github.repository {{"}}"}}
