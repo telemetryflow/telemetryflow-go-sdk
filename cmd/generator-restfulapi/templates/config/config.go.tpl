@@ -44,6 +44,7 @@ type DatabaseConfig struct {
 	MaxOpenConns    int           `mapstructure:"max_open_conns"`
 	MaxIdleConns    int           `mapstructure:"max_idle_conns"`
 	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"`
+	Debug           bool          `mapstructure:"debug"`
 }
 
 {{- if .EnableAuth}}
@@ -109,6 +110,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.max_open_conns", 25)
 	viper.SetDefault("database.max_idle_conns", 5)
 	viper.SetDefault("database.conn_max_lifetime", "5m")
+	viper.SetDefault("database.debug", false)
 
 {{- if .EnableAuth}}
 	viper.SetDefault("jwt.expiration", "24h")
@@ -142,6 +144,7 @@ func Load() (*Config, error) {
 	_ = viper.BindEnv("database.user", "DB_USER")
 	_ = viper.BindEnv("database.password", "DB_PASSWORD")
 	_ = viper.BindEnv("database.ssl_mode", "DB_SSL_MODE")
+	_ = viper.BindEnv("database.debug", "DB_DEBUG")
 
 {{- if .EnableAuth}}
 	_ = viper.BindEnv("jwt.secret", "JWT_SECRET")

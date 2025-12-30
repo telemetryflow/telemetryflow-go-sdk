@@ -3,24 +3,35 @@ package entity
 
 import (
 {{- $hasTime := false}}
+{{- $hasUUID := false}}
 {{- range .EntityFields}}
 {{- if eq .GoType "time.Time"}}
 {{- $hasTime = true}}
+{{- end}}
+{{- if eq .GoType "uuid.UUID"}}
+{{- $hasUUID = true}}
 {{- end}}
 {{- end}}
 {{- if $hasTime}}
 	"time"
 {{- end}}
 
+{{- if $hasUUID}}
 	"github.com/google/uuid"
+{{- end}}
 )
 
 // {{.EntityName}} represents the {{.EntityNameLower}} domain entity
 type {{.EntityName}} struct {
 	Base
 {{- range .EntityFields}}
-	{{.Name}} {{.GoType}} `json:"{{.JSONName}}" db:"{{.DBColumn}}"`
+	{{.Name}} {{.GoType}} `json:"{{.JSONName}}" gorm:"{{if eq .GoType "uuid.UUID"}}type:uuid;{{end}}{{if eq .DBColumn "status"}}type:varchar(50);{{end}}not null{{if eq .Type "string"}};index{{end}}"`
 {{- end}}
+}
+
+// TableName returns the table name for GORM
+func ({{.EntityName}}) TableName() string {
+	return "{{snake .EntityNamePlural}}"
 }
 
 // New{{.EntityName}} creates a new {{.EntityName}} entity

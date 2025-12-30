@@ -2,23 +2,25 @@
 package persistence
 
 import (
-	"database/sql"
 	"fmt"
-	"time"
+	"log"
 
 	"{{.ModulePath}}/internal/infrastructure/config"
 {{- if eq .DBDriver "postgres"}}
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
 {{- else if eq .DBDriver "mysql"}}
-	_ "github.com/go-sql-driver/mysql"
+	"gorm.io/driver/mysql"
 {{- else if eq .DBDriver "sqlite"}}
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/driver/sqlite"
 {{- end}}
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// NewDatabase creates a new database connection
-func NewDatabase(cfg config.DatabaseConfig) (*sql.DB, error) {
+// NewDatabase creates a new GORM database connection
+func NewDatabase(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	var dsn string
+	var dialector gorm.Dialector
 
 	switch cfg.Driver {
 {{- if eq .DBDriver "postgres"}}
@@ -32,76 +34,70 @@ func NewDatabase(cfg config.DatabaseConfig) (*sql.DB, error) {
 			cfg.Name,
 			cfg.SSLMode,
 		)
+		dialector = postgres.Open(dsn)
 {{- else if eq .DBDriver "mysql"}}
 	case "mysql":
 		dsn = fmt.Sprintf(
-			"%s:%s@tcp(%s:%s)/%s?parseTime=true",
+			"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
 			cfg.User,
 			cfg.Password,
 			cfg.Host,
 			cfg.Port,
 			cfg.Name,
 		)
+		dialector = mysql.Open(dsn)
 {{- else if eq .DBDriver "sqlite"}}
 	case "sqlite", "sqlite3":
 		dsn = cfg.Name
+		dialector = sqlite.Open(dsn)
 {{- end}}
 	default:
 		return nil, fmt.Errorf("unsupported database driver: %s", cfg.Driver)
 	}
 
-	db, err := sql.Open(cfg.Driver, dsn)
+	// Configure GORM logger
+	gormLogger := logger.Default.LogMode(logger.Silent)
+	if cfg.Debug {
+		gormLogger = logger.Default.LogMode(logger.Info)
+	}
+
+	// Open GORM connection
+	db, err := gorm.Open(dialector, &gorm.Config{
+		Logger:                 gormLogger,
+		SkipDefaultTransaction: true,
+		PrepareStmt:            true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// Get underlying sql.DB to configure connection pool
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get underlying sql.DB: %w", err)
+	}
+
 	// Configure connection pool
-	db.SetMaxOpenConns(cfg.MaxOpenConns)
-	db.SetMaxIdleConns(cfg.MaxIdleConns)
-	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	sqlDB.SetMaxOpenConns(cfg.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
+	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 
 	// Test connection
-	if err := db.Ping(); err != nil {
+	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
+
+	log.Printf("Database connected successfully: %s:%s/%s", cfg.Host, cfg.Port, cfg.Name)
 
 	return db, nil
 }
 
 // Transaction executes a function within a database transaction
-func Transaction(db *sql.DB, fn func(*sql.Tx) error) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			tx.Rollback()
-			panic(p)
-		}
-	}()
-
-	if err := fn(tx); err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	return tx.Commit()
+func Transaction(db *gorm.DB, fn func(*gorm.DB) error) error {
+	return db.Transaction(fn)
 }
 
-// NullString converts a string pointer to sql.NullString
-func NullString(s *string) sql.NullString {
-	if s == nil {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: *s, Valid: true}
-}
-
-// NullTime converts a time pointer to sql.NullTime
-func NullTime(t *time.Time) sql.NullTime {
-	if t == nil {
-		return sql.NullTime{}
-	}
-	return sql.NullTime{Time: *t, Valid: true}
+// AutoMigrate runs GORM auto migration for the given models
+func AutoMigrate(db *gorm.DB, models ...interface{}) error {
+	return db.AutoMigrate(models...)
 }

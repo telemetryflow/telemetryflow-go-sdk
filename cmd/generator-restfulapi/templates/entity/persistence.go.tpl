@@ -6,21 +6,21 @@ package persistence
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
+	"errors"
 
 	"github.com/google/uuid"
 	"{{.ModulePath}}/internal/domain/entity"
 	"{{.ModulePath}}/internal/domain/repository"
+	"gorm.io/gorm"
 )
 
 // {{lower .EntityName}}Repository implements repository.{{.EntityName}}Repository
 type {{lower .EntityName}}Repository struct {
-	db *sql.DB
+	db *gorm.DB
 }
 
 // New{{.EntityName}}Repository creates a new {{.EntityName}} repository
-func New{{.EntityName}}Repository(db *sql.DB) repository.{{.EntityName}}Repository {
+func New{{.EntityName}}Repository(db *gorm.DB) repository.{{.EntityName}}Repository {
 	return &{{lower .EntityName}}Repository{
 		db: db,
 	}
@@ -28,91 +28,39 @@ func New{{.EntityName}}Repository(db *sql.DB) repository.{{.EntityName}}Reposito
 
 // Create creates a new {{lower .EntityName}}
 func (r *{{lower .EntityName}}Repository) Create(ctx context.Context, e *entity.{{.EntityName}}) error {
-	query := `
-		INSERT INTO {{snake .EntityNamePlural}} (
-			id, {{range $i, $field := .EntityFields}}{{if $i}}, {{end}}{{$field.DBColumn}}{{end}}, created_at, updated_at
-		) VALUES (
-			$1, {{range $i, $field := .EntityFields}}${{add $i 2}}, {{end}}${{add (len .EntityFields) 2}}, ${{add (len .EntityFields) 3}}
-		)`
-
-	_, err := r.db.ExecContext(ctx, query,
-		e.ID,
-{{- range .EntityFields}}
-		e.{{.Name}},
-{{- end}}
-		e.CreatedAt,
-		e.UpdatedAt,
-	)
-	return err
+	return r.db.WithContext(ctx).Create(e).Error
 }
 
 // FindByID retrieves a {{lower .EntityName}} by ID
 func (r *{{lower .EntityName}}Repository) FindByID(ctx context.Context, id uuid.UUID) (*entity.{{.EntityName}}, error) {
-	query := `
-		SELECT id, {{range $i, $field := .EntityFields}}{{if $i}}, {{end}}{{$field.DBColumn}}{{end}}, created_at, updated_at
-		FROM {{snake .EntityNamePlural}}
-		WHERE id = $1 AND deleted_at IS NULL`
-
-	row := r.db.QueryRowContext(ctx, query, id)
-
-	e := &entity.{{.EntityName}}{}
-	err := row.Scan(
-		&e.ID,
-{{- range .EntityFields}}
-		&e.{{.Name}},
-{{- end}}
-		&e.CreatedAt,
-		&e.UpdatedAt,
-	)
+	var e entity.{{.EntityName}}
+	err := r.db.WithContext(ctx).First(&e, "id = ?", id).Error
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("{{lower .EntityName}} not found")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("{{lower .EntityName}} not found")
 		}
 		return nil, err
 	}
-
-	return e, nil
+	return &e, nil
 }
 
 // FindAll retrieves all {{lower .EntityNamePlural}} with pagination
 func (r *{{lower .EntityName}}Repository) FindAll(ctx context.Context, offset, limit int) ([]entity.{{.EntityName}}, int64, error) {
-	// Count total records
-	countQuery := "SELECT COUNT(*) FROM {{snake .EntityNamePlural}} WHERE deleted_at IS NULL"
+	var {{lower .EntityNamePlural}} []entity.{{.EntityName}}
 	var total int64
-	err := r.db.QueryRowContext(ctx, countQuery).Scan(&total)
-	if err != nil {
+
+	// Count total records
+	if err := r.db.WithContext(ctx).Model(&entity.{{.EntityName}}{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	// Get paginated records
-	query := `
-		SELECT id, {{range $i, $field := .EntityFields}}{{if $i}}, {{end}}{{$field.DBColumn}}{{end}}, created_at, updated_at
-		FROM {{snake .EntityNamePlural}}
-		WHERE deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT $1 OFFSET $2`
-
-	rows, err := r.db.QueryContext(ctx, query, limit, offset)
-	if err != nil {
+	if err := r.db.WithContext(ctx).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&{{lower .EntityNamePlural}}).Error; err != nil {
 		return nil, 0, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var {{lower .EntityNamePlural}} []entity.{{.EntityName}}
-	for rows.Next() {
-		var e entity.{{.EntityName}}
-		err := rows.Scan(
-			&e.ID,
-{{- range .EntityFields}}
-			&e.{{.Name}},
-{{- end}}
-			&e.CreatedAt,
-			&e.UpdatedAt,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		{{lower .EntityNamePlural}} = append({{lower .EntityNamePlural}}, e)
 	}
 
 	return {{lower .EntityNamePlural}}, total, nil
@@ -120,68 +68,31 @@ func (r *{{lower .EntityName}}Repository) FindAll(ctx context.Context, offset, l
 
 // Update updates a {{lower .EntityName}}
 func (r *{{lower .EntityName}}Repository) Update(ctx context.Context, e *entity.{{.EntityName}}) error {
-	query := `
-		UPDATE {{snake .EntityNamePlural}}
-		SET {{range $i, $field := .EntityFields}}{{if $i}}, {{end}}{{$field.DBColumn}} = ${{add $i 1}}{{end}}, updated_at = ${{add (len .EntityFields) 1}}
-		WHERE id = ${{add (len .EntityFields) 2}} AND deleted_at IS NULL`
-
-	_, err := r.db.ExecContext(ctx, query,
-{{- range .EntityFields}}
-		e.{{.Name}},
-{{- end}}
-		e.UpdatedAt,
-		e.ID,
-	)
-	return err
+	return r.db.WithContext(ctx).Save(e).Error
 }
 
 // Delete soft-deletes a {{lower .EntityName}} by ID
 func (r *{{lower .EntityName}}Repository) Delete(ctx context.Context, id uuid.UUID) error {
-	query := "UPDATE {{snake .EntityNamePlural}} SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL"
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	return r.db.WithContext(ctx).Delete(&entity.{{.EntityName}}{}, "id = ?", id).Error
 }
 
 // HardDelete permanently deletes a {{lower .EntityName}} by ID
 func (r *{{lower .EntityName}}Repository) HardDelete(ctx context.Context, id uuid.UUID) error {
-	query := "DELETE FROM {{snake .EntityNamePlural}} WHERE id = $1"
-	_, err := r.db.ExecContext(ctx, query, id)
-	return err
+	return r.db.WithContext(ctx).Unscoped().Delete(&entity.{{.EntityName}}{}, "id = ?", id).Error
 }
 {{- range .EntityFields}}
 {{- if eq .Type "string"}}
 
 // FindBy{{.Name}} finds {{$.EntityNamePlural}} by {{.Name}}
 func (r *{{lower $.EntityName}}Repository) FindBy{{.Name}}(ctx context.Context, {{.JSONName}} string) ([]entity.{{$.EntityName}}, error) {
-	query := `
-		SELECT id, {{range $i, $field := $.EntityFields}}{{if $i}}, {{end}}{{$field.DBColumn}}{{end}}, created_at, updated_at
-		FROM {{snake $.EntityNamePlural}}
-		WHERE {{.DBColumn}} = $1 AND deleted_at IS NULL
-		ORDER BY created_at DESC`
-
-	rows, err := r.db.QueryContext(ctx, query, {{.JSONName}})
+	var {{lower $.EntityNamePlural}} []entity.{{$.EntityName}}
+	err := r.db.WithContext(ctx).
+		Where("{{.DBColumn}} = ?", {{.JSONName}}).
+		Order("created_at DESC").
+		Find(&{{lower $.EntityNamePlural}}).Error
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = rows.Close() }()
-
-	var {{lower $.EntityNamePlural}} []entity.{{$.EntityName}}
-	for rows.Next() {
-		var e entity.{{$.EntityName}}
-		err := rows.Scan(
-			&e.ID,
-{{- range $.EntityFields}}
-			&e.{{.Name}},
-{{- end}}
-			&e.CreatedAt,
-			&e.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		{{lower $.EntityNamePlural}} = append({{lower $.EntityNamePlural}}, e)
-	}
-
 	return {{lower $.EntityNamePlural}}, nil
 }
 {{- end}}

@@ -105,6 +105,19 @@ build:
 	$(GOBUILD) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/api
 	@echo "$(GREEN)Build complete: $(BUILD_DIR)/$(BINARY_NAME)$(NC)"
 
+build-all:
+	@echo "$(GREEN)Building $(BINARY_NAME) for all platforms...$(NC)"
+	@mkdir -p $(BUILD_DIR)
+	@for platform in $(PLATFORMS); do \
+		os=$${platform%/*}; \
+		arch=$${platform#*/}; \
+		output="$(BUILD_DIR)/$(BINARY_NAME)-$${os}-$${arch}"; \
+		if [ "$$os" = "windows" ]; then output="$${output}.exe"; fi; \
+		echo "Building $$output..."; \
+		CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GOBUILD) -ldflags "$(LDFLAGS)" -o $$output ./cmd/api; \
+	done
+	@echo "$(GREEN)All platforms built$(NC)"
+
 ## Development commands
 run: build
 	@echo "$(GREEN)Starting $(BINARY_NAME)...$(NC)"
