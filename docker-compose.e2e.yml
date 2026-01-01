@@ -19,6 +19,26 @@
 #   docker-compose -f docker-compose.e2e.yml down
 #
 # =============================================================================
+# OTLP HTTP Endpoints (Dual Ingestion Support)
+# =============================================================================
+#
+#   TelemetryFlow Platform (Recommended - TFO Standalone):
+#     POST http://localhost:4318/v2/traces
+#     POST http://localhost:4318/v2/metrics
+#     POST http://localhost:4318/v2/logs
+#
+#   OTEL Community (Backwards Compatible - OCB/Standard):
+#     POST http://localhost:4318/v1/traces
+#     POST http://localhost:4318/v1/metrics
+#     POST http://localhost:4318/v1/logs
+#
+#   gRPC (Both versions via same port):
+#     localhost:4317
+#
+#   NOTE: v2 endpoints require TFO Standalone build.
+#         OCB builds support v1 endpoints only.
+#
+# =============================================================================
 
 services:
   # ---------------------------------------------------------------------------
@@ -83,22 +103,47 @@ services:
   # ---------------------------------------------------------------------------
   # OpenTelemetry Collector
   # ---------------------------------------------------------------------------
+  # Supports dual ingestion: v1 (OTEL standard) and v2 (TelemetryFlow enhanced)
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.142.0
+    platform: linux/amd64
+    # =============================================================================
+    # TelemetryFlow Collector (TFO-Collector) - Custom TFO format with OTLP support (v1.1.1+)
+    image: telemetryflow/telemetryflow-collector:${TFO_VERSION:-latest}
+    command: ["--config=/etc/tfo-collector/tfo-collector.yaml"]
+    # =============================================================================
+    # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
+    # image: telemetryflow/telemetryflow-collector-ocb:${TFO_VERSION:-latest}
+    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
+    # =============================================================================
+    # OTEL Collector Community Contributor (Standard OTEL format)
+    # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
+    # command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    # =============================================================================
     container_name: otel-collector-e2e
-    command: ["--config=/etc/otel/config.yaml"]
-    ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
-      - "8888:8888"   # Prometheus metrics
-      - "13133:13133" # Health check
+    restart: unless-stopped
     volumes:
-      - ./tests/e2e/testdata/otel-collector.yaml:/etc/otel/config.yaml:ro
+      # TelemetryFlow Collector config (Custom TFO format)
+      - ./tests/e2e/testdata/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
+      # =============================================================================
+      # TelemetryFlow Collector OCB config (Standard OTEL format)
+      # - ./tests/e2e/testdata/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
+      # =============================================================================
+      # OTEL Collector Community Contributor config (Standard OTEL format)
+      # - ./tests/e2e/testdata/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC (v1 & v2)
+      - "4318:4318"   # OTLP HTTP (v1 & v2)
+      - "8888:8888"   # Prometheus metrics (self)
+      - "8889:8889"   # Prometheus exporter
+      - "13133:13133" # Health check
+      - "55679:55679" # zPages
+      - "1777:1777"   # pprof
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:13133/"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 10s
     networks:
       - e2e-test
 
@@ -125,11 +170,12 @@ services:
   # Jaeger (for trace verification)
   # ---------------------------------------------------------------------------
   jaeger:
-    image: jaegertracing/all-in-one:1.52
+    image: jaegertracing/all-in-one:1.64
     container_name: jaeger-e2e
     ports:
       - "16686:16686" # Jaeger UI
       - "14268:14268" # Jaeger HTTP collector
+      - "14250:14250" # Jaeger gRPC
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:

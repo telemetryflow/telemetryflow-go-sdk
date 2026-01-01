@@ -15,6 +15,22 @@
 # Copy to: /etc/tfo-collector/tfo-collector.yaml or ~/.tfo-collector/
 #
 # =============================================================================
+# OTLP HTTP Endpoints (TFO Standalone supports BOTH v1 and v2)
+# =============================================================================
+#   TelemetryFlow Platform (Recommended):
+#     POST http://localhost:4318/v2/traces
+#     POST http://localhost:4318/v2/metrics
+#     POST http://localhost:4318/v2/logs
+#
+#   OTEL Community (Backwards Compatible):
+#     POST http://localhost:4318/v1/traces
+#     POST http://localhost:4318/v1/metrics
+#     POST http://localhost:4318/v1/logs
+#
+#   gRPC (Both versions via same port):
+#     localhost:4317
+#
+# =============================================================================
 # Environment Variables
 # =============================================================================
 #   TELEMETRYFLOW_API_KEY_ID      - API Key ID for authentication (tfk_xxx)
@@ -23,6 +39,11 @@
 #   TELEMETRYFLOW_COLLECTOR_ID    - Unique collector identifier (optional)
 #   TELEMETRYFLOW_COLLECTOR_NAME  - Human-readable collector name (optional)
 #   TELEMETRYFLOW_ENVIRONMENT     - Deployment environment (optional)
+#
+# Example .env file:
+#   TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id
+#   TELEMETRYFLOW_API_KEY_SECRET=tfs_your_key_secret
+#   TELEMETRYFLOW_ENDPOINT=collector.telemetryflow.id:4317
 #
 # =============================================================================
 
@@ -51,15 +72,16 @@ collector:
   # Collector hostname (auto-detected if empty)
   hostname: ""
   # Human-readable collector name
-  name: "${TELEMETRYFLOW_COLLECTOR_NAME:-TelemetryFlow SDK Collector}"
+  name: "${TELEMETRYFLOW_COLLECTOR_NAME:-TelemetryFlow Go SDK Collector}"
   # Human-readable description
-  description: "TelemetryFlow SDK - Community Enterprise Observability Platform"
+  description: "TelemetryFlow Go SDK - Community Enterprise Observability Platform"
   # Collector version (auto-populated at build time)
   version: ""
   # Custom tags for labeling and filtering
   tags:
     environment: "${TELEMETRYFLOW_ENVIRONMENT:-development}"
-    datacenter: "tfo-sdk"
+    datacenter: "tfo-go-sdk"
+    sdk_language: "go"
 
 # =============================================================================
 # RECEIVERS - How telemetry data enters the collector
@@ -118,6 +140,9 @@ processors:
       - key: deployment.environment
         value: "${TELEMETRYFLOW_ENVIRONMENT:-development}"
         action: upsert
+      - key: telemetryflow.sdk.language
+        value: go
+        action: upsert
 
 # =============================================================================
 # CONNECTORS - Pipeline bridging for Exemplars and derived metrics
@@ -172,16 +197,11 @@ exporters:
     namespace: telemetryflow
     const_labels:
       collector: tfo-collector
+      sdk: go
     send_timestamps: true
     metric_expiration: 5m
     enable_open_metrics: true
     resource_to_telemetry_conversion: true
-
-  # OTLP exporter to Jaeger (uncomment to enable)
-  # otlp/jaeger:
-  #   endpoint: "jaeger:4317"
-  #   tls:
-  #     insecure: true
 
   # OTLP exporter for forwarding to TelemetryFlow backend (uncomment to enable)
   # otlp:

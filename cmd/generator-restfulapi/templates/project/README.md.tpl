@@ -253,7 +253,7 @@ Configuration is loaded from environment variables and `.env` file.
 {{- end}}
 {{- if .EnableTelemetry}}
 | `OTEL_VERSION` | OTEL Collector image version | `0.142.0` |
-| `JAEGER_VERSION` | Jaeger image version | `2.2.0` |
+| `JAEGER_VERSION` | Jaeger image version | `2.13.0` |
 {{- end}}
 | `CONTAINER_API` | API container name | `{{.ProjectName | lower}}_api` |
 

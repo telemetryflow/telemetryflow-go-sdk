@@ -230,7 +230,7 @@ services:
   jaeger:
     profiles: ["monitoring", "all"]
     platform: linux/amd64
-    image: jaegertracing/jaeger:${JAEGER_VERSION:-2.2.0}
+    image: jaegertracing/jaeger:${JAEGER_VERSION:-2.13.0}
     container_name: ${CONTAINER_JAEGER:-{{.ProjectName | lower}}_jaeger}
     restart: unless-stopped
     ports:
