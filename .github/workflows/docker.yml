@@ -17,7 +17,7 @@
 #
 # =============================================================================
 
-name: Docker Build
+name: Docker Build - TFO Go SDK
 
 on:
   push:
