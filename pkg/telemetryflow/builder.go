@@ -21,6 +21,7 @@ type Builder struct {
 	serviceNamespace string
 	serviceVersion   string
 	environment      string
+	datacenter       string
 	protocol         domain.Protocol
 	insecure         bool
 	timeout          time.Duration
@@ -30,6 +31,20 @@ type Builder struct {
 	enableExemplars  bool
 	customAttrs      map[string]string
 	errors           []error
+
+	// TFO v2 API settings (aligned with tfoexporter)
+	useV2API        bool
+	v2Only          bool
+	tracesEndpoint  string
+	metricsEndpoint string
+	logsEndpoint    string
+
+	// Collector Identity (aligned with tfoidentityextension)
+	collectorName        string
+	collectorDescription string
+	collectorHostname    string
+	collectorTags        map[string]string
+	enrichResources      bool
 }
 
 // NewBuilder creates a new SDK builder
@@ -43,8 +58,21 @@ func NewBuilder() *Builder {
 		enableTraces:     true,
 		enableExemplars:  true, // enabled by default for metrics-to-traces correlation
 		serviceNamespace: "telemetryflow",
+		datacenter:       "default",
 		customAttrs:      make(map[string]string),
 		errors:           make([]error, 0),
+		// TFO v2 API settings (aligned with tfoexporter)
+		useV2API:        true,  // v2 API enabled by default for TFO Platform
+		v2Only:          false, // allow both v1 and v2 by default
+		tracesEndpoint:  "",    // use defaults
+		metricsEndpoint: "",    // use defaults
+		logsEndpoint:    "",    // use defaults
+		// Collector Identity (aligned with tfoidentityextension)
+		collectorName:        "",
+		collectorDescription: "",
+		collectorHostname:    "",
+		collectorTags:        make(map[string]string),
+		enrichResources:      true, // enabled by default
 	}
 }
 
@@ -220,6 +248,95 @@ func (b *Builder) WithExemplars(enabled bool) *Builder {
 	return b
 }
 
+// WithV2API enables/disables TFO Platform v2 API endpoints (aligned with tfoexporter)
+func (b *Builder) WithV2API(enabled bool) *Builder {
+	b.useV2API = enabled
+	return b
+}
+
+// WithV2Only sets v2-only mode - only v2 endpoints will be used
+func (b *Builder) WithV2Only() *Builder {
+	b.v2Only = true
+	b.useV2API = true // v2Only implies useV2API
+	return b
+}
+
+// WithTracesEndpoint sets a custom traces endpoint path
+func (b *Builder) WithTracesEndpoint(endpoint string) *Builder {
+	b.tracesEndpoint = endpoint
+	return b
+}
+
+// WithMetricsEndpoint sets a custom metrics endpoint path
+func (b *Builder) WithMetricsEndpoint(endpoint string) *Builder {
+	b.metricsEndpoint = endpoint
+	return b
+}
+
+// WithLogsEndpoint sets a custom logs endpoint path
+func (b *Builder) WithLogsEndpoint(endpoint string) *Builder {
+	b.logsEndpoint = endpoint
+	return b
+}
+
+// WithCollectorName sets the human-readable collector name (aligned with tfoidentityextension)
+func (b *Builder) WithCollectorName(name string) *Builder {
+	b.collectorName = name
+	return b
+}
+
+// WithCollectorNameFromEnv reads collector name from environment variable
+func (b *Builder) WithCollectorNameFromEnv() *Builder {
+	b.collectorName = os.Getenv("TELEMETRYFLOW_COLLECTOR_NAME")
+	return b
+}
+
+// WithCollectorDescription sets the collector description (aligned with tfoidentityextension)
+func (b *Builder) WithCollectorDescription(description string) *Builder {
+	b.collectorDescription = description
+	return b
+}
+
+// WithCollectorHostname sets the collector hostname (aligned with tfoidentityextension)
+func (b *Builder) WithCollectorHostname(hostname string) *Builder {
+	b.collectorHostname = hostname
+	return b
+}
+
+// WithCollectorTag adds a single collector tag (aligned with tfoidentityextension)
+func (b *Builder) WithCollectorTag(key, value string) *Builder {
+	b.collectorTags[key] = value
+	return b
+}
+
+// WithCollectorTags sets all collector tags (aligned with tfoidentityextension)
+func (b *Builder) WithCollectorTags(tags map[string]string) *Builder {
+	b.collectorTags = tags
+	return b
+}
+
+// WithEnrichResources enables/disables collector identity enrichment (aligned with tfoidentityextension)
+func (b *Builder) WithEnrichResources(enabled bool) *Builder {
+	b.enrichResources = enabled
+	return b
+}
+
+// WithDatacenter sets the datacenter identifier
+func (b *Builder) WithDatacenter(datacenter string) *Builder {
+	b.datacenter = datacenter
+	return b
+}
+
+// WithDatacenterFromEnv reads datacenter from environment variable
+func (b *Builder) WithDatacenterFromEnv() *Builder {
+	dc := os.Getenv("TELEMETRYFLOW_DATACENTER")
+	if dc == "" {
+		dc = "default"
+	}
+	b.datacenter = dc
+	return b
+}
+
 // WithAutoConfiguration attempts to configure from environment variables
 func (b *Builder) WithAutoConfiguration() *Builder {
 	return b.
@@ -228,6 +345,8 @@ func (b *Builder) WithAutoConfiguration() *Builder {
 		WithServiceFromEnv().
 		WithServiceNamespaceFromEnv().
 		WithCollectorIDFromEnv().
+		WithCollectorNameFromEnv().
+		WithDatacenterFromEnv().
 		WithEnvironmentFromEnv()
 }
 
@@ -270,11 +389,42 @@ func (b *Builder) Build() (*Client, error) {
 		WithServiceVersion(b.serviceVersion).
 		WithServiceNamespace(b.serviceNamespace).
 		WithEnvironment(b.environment).
-		WithExemplars(b.enableExemplars)
+		WithDatacenter(b.datacenter).
+		WithExemplars(b.enableExemplars).
+		WithV2API(b.useV2API).
+		WithV2Only(b.v2Only).
+		WithEnrichResources(b.enrichResources)
 
 	// Set collector ID if provided
 	if b.collectorID != "" {
 		config.WithCollectorID(b.collectorID)
+	}
+
+	// Set collector identity fields (aligned with tfoidentityextension)
+	if b.collectorName != "" {
+		config.WithCollectorName(b.collectorName)
+	}
+	if b.collectorDescription != "" {
+		config.WithCollectorDescription(b.collectorDescription)
+	}
+	if b.collectorHostname != "" {
+		config.WithCollectorHostname(b.collectorHostname)
+	}
+
+	// Set collector tags
+	for key, value := range b.collectorTags {
+		config.WithCollectorTag(key, value)
+	}
+
+	// Set custom endpoint paths (aligned with tfoexporter)
+	if b.tracesEndpoint != "" {
+		config.WithTracesEndpoint(b.tracesEndpoint)
+	}
+	if b.metricsEndpoint != "" {
+		config.WithMetricsEndpoint(b.metricsEndpoint)
+	}
+	if b.logsEndpoint != "" {
+		config.WithLogsEndpoint(b.logsEndpoint)
 	}
 
 	// Add custom attributes

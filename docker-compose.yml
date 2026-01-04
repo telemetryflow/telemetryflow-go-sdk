@@ -146,12 +146,12 @@ services:
       - example
     platform: linux/amd64
     # =============================================================================
-    # TelemetryFlow Collector (TFO-Collector) - Custom TFO format with OTLP support (v1.1.1+)
+    # TelemetryFlow Collector (TFO-Collector) - TFO format with OTLP support (v1.1.2+)
     image: telemetryflow/telemetryflow-collector:${TFO_VERSION:-latest}
     command: ["--config=/etc/tfo-collector/tfo-collector.yaml"]
     # =============================================================================
     # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
-    # image: telemetryflow/telemetryflow-collector-ocb:${TFO_VERSION:-latest}
+    # image: telemetryflow/telemetryflow-collector:${TFO_VERSION:-latest}
     # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
     # =============================================================================
     # OTEL Collector Community Contributor (Standard OTEL format)

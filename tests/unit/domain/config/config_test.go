@@ -336,6 +336,260 @@ func TestTelemetryConfig_BuilderChaining(t *testing.T) {
 	})
 }
 
+// =============================================================================
+// TFO v2 API Tests (aligned with tfoexporter)
+// =============================================================================
+
+func TestTelemetryConfig_V2APIDefaults(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should enable v2 API by default", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		assert.True(t, config.UseV2API())
+		assert.False(t, config.IsV2Only())
+	})
+
+	t.Run("should return v2 endpoint paths by default", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		assert.Equal(t, "/v2/traces", config.TracesEndpoint())
+		assert.Equal(t, "/v2/metrics", config.MetricsEndpoint())
+		assert.Equal(t, "/v2/logs", config.LogsEndpoint())
+	})
+}
+
+func TestTelemetryConfig_WithV2API(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should enable v2 API", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithV2API(true)
+
+		assert.True(t, config.UseV2API())
+		assert.Equal(t, "/v2/traces", config.TracesEndpoint())
+		assert.Equal(t, "/v2/metrics", config.MetricsEndpoint())
+		assert.Equal(t, "/v2/logs", config.LogsEndpoint())
+	})
+
+	t.Run("should disable v2 API and use v1 endpoints", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithV2API(false)
+
+		assert.False(t, config.UseV2API())
+		assert.Equal(t, "/v1/traces", config.TracesEndpoint())
+		assert.Equal(t, "/v1/metrics", config.MetricsEndpoint())
+		assert.Equal(t, "/v1/logs", config.LogsEndpoint())
+	})
+}
+
+func TestTelemetryConfig_WithV2Only(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should enable v2-only mode", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithV2Only(true)
+
+		assert.True(t, config.IsV2Only())
+		assert.True(t, config.UseV2API()) // v2Only implies useV2API
+	})
+
+	t.Run("should disable v2-only mode", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithV2Only(false)
+
+		assert.False(t, config.IsV2Only())
+	})
+}
+
+func TestTelemetryConfig_WithCustomEndpoints(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set custom traces endpoint", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithTracesEndpoint("/custom/traces")
+
+		assert.Equal(t, "/custom/traces", config.TracesEndpoint())
+	})
+
+	t.Run("should set custom metrics endpoint", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithMetricsEndpoint("/custom/metrics")
+
+		assert.Equal(t, "/custom/metrics", config.MetricsEndpoint())
+	})
+
+	t.Run("should set custom logs endpoint", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithLogsEndpoint("/custom/logs")
+
+		assert.Equal(t, "/custom/logs", config.LogsEndpoint())
+	})
+}
+
+// =============================================================================
+// Collector Identity Tests (aligned with tfoidentityextension)
+// =============================================================================
+
+func TestTelemetryConfig_CollectorIdentityDefaults(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should have empty collector identity by default", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		assert.Equal(t, "", config.CollectorName())
+		assert.Equal(t, "", config.CollectorDescription())
+		assert.Equal(t, "", config.CollectorHostname())
+		assert.Empty(t, config.CollectorTags())
+	})
+
+	t.Run("should enable resource enrichment by default", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		assert.True(t, config.IsEnrichResourcesEnabled())
+	})
+
+	t.Run("should have default datacenter", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		assert.Equal(t, "default", config.Datacenter())
+	})
+}
+
+func TestTelemetryConfig_WithCollectorName(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set collector name", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithCollectorName("TFO SDK Collector")
+
+		assert.Equal(t, "TFO SDK Collector", config.CollectorName())
+	})
+}
+
+func TestTelemetryConfig_WithCollectorDescription(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set collector description", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithCollectorDescription("TelemetryFlow Go SDK embedded collector")
+
+		assert.Equal(t, "TelemetryFlow Go SDK embedded collector", config.CollectorDescription())
+	})
+}
+
+func TestTelemetryConfig_WithCollectorHostname(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set collector hostname", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithCollectorHostname("app-server-01")
+
+		assert.Equal(t, "app-server-01", config.CollectorHostname())
+	})
+}
+
+func TestTelemetryConfig_WithCollectorTags(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set single collector tag", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithCollectorTag("environment", "production")
+
+		tags := config.CollectorTags()
+		assert.Equal(t, "production", tags["environment"])
+	})
+
+	t.Run("should set multiple collector tags", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.
+			WithCollectorTag("environment", "staging").
+			WithCollectorTag("datacenter", "us-east-1").
+			WithCollectorTag("mode", "unified-v2")
+
+		tags := config.CollectorTags()
+		assert.Equal(t, "staging", tags["environment"])
+		assert.Equal(t, "us-east-1", tags["datacenter"])
+		assert.Equal(t, "unified-v2", tags["mode"])
+	})
+
+	t.Run("should set all collector tags at once", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithCollectorTags(map[string]string{
+			"environment": "production",
+			"datacenter":  "dc1",
+			"team":        "platform",
+		})
+
+		tags := config.CollectorTags()
+		assert.Len(t, tags, 3)
+		assert.Equal(t, "production", tags["environment"])
+		assert.Equal(t, "dc1", tags["datacenter"])
+		assert.Equal(t, "platform", tags["team"])
+	})
+}
+
+func TestTelemetryConfig_WithEnrichResources(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should enable resource enrichment", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithEnrichResources(true)
+
+		assert.True(t, config.IsEnrichResourcesEnabled())
+	})
+
+	t.Run("should disable resource enrichment", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithEnrichResources(false)
+
+		assert.False(t, config.IsEnrichResourcesEnabled())
+	})
+}
+
+func TestTelemetryConfig_WithDatacenter(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should set datacenter", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+		config.WithDatacenter("aws-us-east-1")
+
+		assert.Equal(t, "aws-us-east-1", config.Datacenter())
+	})
+}
+
+func TestTelemetryConfig_TFOv2FullChaining(t *testing.T) {
+	creds := createValidCredentials(t)
+
+	t.Run("should support full TFO v2 method chaining", func(t *testing.T) {
+		config, _ := domain.NewTelemetryConfig(creds, "localhost:4317", "my-service")
+
+		result := config.
+			WithV2API(true).
+			WithV2Only(true).
+			WithCollectorName("TFO SDK v2").
+			WithCollectorDescription("TelemetryFlow Go SDK - TFO v2 mode").
+			WithCollectorHostname("app-server-01").
+			WithCollectorTag("environment", "production").
+			WithCollectorTag("mode", "unified-v2").
+			WithDatacenter("aws-us-east-1").
+			WithEnrichResources(true)
+
+		assert.Same(t, config, result)
+		assert.True(t, config.UseV2API())
+		assert.True(t, config.IsV2Only())
+		assert.Equal(t, "TFO SDK v2", config.CollectorName())
+		assert.Equal(t, "TelemetryFlow Go SDK - TFO v2 mode", config.CollectorDescription())
+		assert.Equal(t, "app-server-01", config.CollectorHostname())
+		assert.Equal(t, "aws-us-east-1", config.Datacenter())
+		assert.True(t, config.IsEnrichResourcesEnabled())
+
+		tags := config.CollectorTags()
+		assert.Equal(t, "production", tags["environment"])
+		assert.Equal(t, "unified-v2", tags["mode"])
+	})
+}
+
 // Benchmark tests
 func BenchmarkNewTelemetryConfig(b *testing.B) {
 	creds, _ := domain.NewCredentials("tfk_bench", "tfs_bench")

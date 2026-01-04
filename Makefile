@@ -7,7 +7,10 @@
 
 # Build configuration
 PRODUCT_NAME := TelemetryFlow Go SDK
-VERSION ?= 1.1.1
+VERSION ?= 1.1.2
+TFO_COLLECTOR_VERSION := 1.1.2
+OTEL_VERSION := 0.142.0
+OTEL_GO_SDK_VERSION := 1.39.0
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME := $(shell date -u '+%Y-%m-%dT%H:%M:%SZ')
@@ -109,8 +112,16 @@ help:
 	@echo "  make docs             - Show documentation locations"
 	@echo "  make godoc            - Start godoc server"
 	@echo ""
+	@echo "$(YELLOW)TFO v2 API Features:$(NC)"
+	@echo "  - v2 endpoints: /v2/traces, /v2/metrics, /v2/logs"
+	@echo "  - Collector identity (tfoidentityextension)"
+	@echo "  - Auth headers (tfoauthextension)"
+	@echo ""
 	@echo "$(YELLOW)Configuration:$(NC)"
 	@echo "  VERSION=$(VERSION)"
+	@echo "  TFO_COLLECTOR_VERSION=$(TFO_COLLECTOR_VERSION)"
+	@echo "  OTEL_VERSION=$(OTEL_VERSION)"
+	@echo "  OTEL_GO_SDK_VERSION=$(OTEL_GO_SDK_VERSION)"
 	@echo "  GIT_COMMIT=$(GIT_COMMIT)"
 	@echo "  GIT_BRANCH=$(GIT_BRANCH)"
 	@echo "  BUILD_TIME=$(BUILD_TIME)"
@@ -486,10 +497,19 @@ ci-test: test-unit-ci test-integration-ci
 ## Version info
 version:
 	@echo "$(GREEN)$(PRODUCT_NAME)$(NC)"
-	@echo "  Version:      $(VERSION)"
-	@echo "  Git Commit:   $(GIT_COMMIT)"
-	@echo "  Git Branch:   $(GIT_BRANCH)"
-	@echo "  Build Time:   $(BUILD_TIME)"
-	@echo "  Go Version:   $(GO_VERSION)"
+	@echo "  Version:            $(VERSION)"
+	@echo "  TFO-Collector:      $(TFO_COLLECTOR_VERSION)"
+	@echo "  OTEL Collector:     $(OTEL_VERSION)"
+	@echo "  OTEL Go SDK:        $(OTEL_GO_SDK_VERSION)"
+	@echo "  Git Commit:         $(GIT_COMMIT)"
+	@echo "  Git Branch:         $(GIT_BRANCH)"
+	@echo "  Build Time:         $(BUILD_TIME)"
+	@echo "  Go Version:         $(GO_VERSION)"
+	@echo ""
+	@echo "$(YELLOW)TFO v2 API Features:$(NC)"
+	@echo "  - v2 endpoints: /v2/traces, /v2/metrics, /v2/logs"
+	@echo "  - Collector identity (aligned with tfoidentityextension)"
+	@echo "  - Auth headers (aligned with tfoauthextension)"
+	@echo "  - Custom endpoint paths (aligned with tfoexporter)"
 
 .DEFAULT_GOAL := help

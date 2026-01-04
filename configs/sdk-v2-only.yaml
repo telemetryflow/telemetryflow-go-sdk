@@ -1,0 +1,153 @@
+# =============================================================================
+# TelemetryFlow Go SDK - TFO v2-Only Configuration
+# =============================================================================
+# This configuration enables TFO v2-only mode for maximum TelemetryFlow Platform
+# integration. All telemetry is sent via v2 endpoints with full authentication.
+#
+# Compatible with TFO-Collector v1.1.2 (OCB-native) in v2_only mode
+#
+# Usage in Go:
+#   client, err := telemetryflow.NewBuilder().
+#       WithConfigFile("configs/sdk-v2-only.yaml").
+#       Build()
+#
+# Or programmatically:
+#   client, err := telemetryflow.NewBuilder().
+#       WithAPIKey("tfk_xxx", "tfs_xxx").
+#       WithEndpoint("localhost:4317").
+#       WithService("my-service", "1.0.0").
+#       WithV2Only().
+#       WithCollectorName("My App Collector").
+#       Build()
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SDK Version Info
+# -----------------------------------------------------------------------------
+version: "1.1.2"
+tfo_collector_version: "1.1.2"
+otel_version: "0.142.0"
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  name: "${TELEMETRYFLOW_SERVICE_NAME:my-service}"
+  version: "${TELEMETRYFLOW_SERVICE_VERSION:1.0.0}"
+  namespace: "${TELEMETRYFLOW_SERVICE_NAMESPACE:telemetryflow}"
+  environment: "${TELEMETRYFLOW_ENVIRONMENT:production}"
+
+# -----------------------------------------------------------------------------
+# TelemetryFlow API Authentication (REQUIRED for v2-only mode)
+# -----------------------------------------------------------------------------
+credentials:
+  key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+
+# -----------------------------------------------------------------------------
+# Endpoint Configuration
+# -----------------------------------------------------------------------------
+endpoint:
+  address: "${TELEMETRYFLOW_ENDPOINT:localhost:4317}"
+  protocol: "${TELEMETRYFLOW_PROTOCOL:grpc}"
+  insecure: ${TELEMETRYFLOW_INSECURE:false}
+  timeout: "30s"
+
+# -----------------------------------------------------------------------------
+# TFO v2 API Configuration - V2-ONLY MODE
+# -----------------------------------------------------------------------------
+# In v2-only mode:
+# - All telemetry uses v2 endpoints exclusively
+# - v1 endpoints are disabled
+# - Authentication is mandatory
+# - Enhanced headers are sent with all requests
+# -----------------------------------------------------------------------------
+v2_api:
+  enabled: true
+  v2_only: true
+  traces_endpoint: "/v2/traces"
+  metrics_endpoint: "/v2/metrics"
+  logs_endpoint: "/v2/logs"
+
+# -----------------------------------------------------------------------------
+# Collector Identity (REQUIRED for v2-only mode)
+# -----------------------------------------------------------------------------
+# In v2-only mode, collector identity is used for:
+# - Request authentication and authorization
+# - Telemetry correlation and grouping
+# - Resource enrichment and attribution
+# -----------------------------------------------------------------------------
+collector:
+  id: "${TELEMETRYFLOW_COLLECTOR_ID:}"
+  name: "${TELEMETRYFLOW_COLLECTOR_NAME:TelemetryFlow Go SDK v2}"
+  description: "TelemetryFlow Go SDK - TFO v2-only mode"
+  hostname: "${TELEMETRYFLOW_COLLECTOR_HOSTNAME:}"
+  datacenter: "${TELEMETRYFLOW_DATACENTER:default}"
+  enrich_resources: true
+  tags:
+    sdk_version: "1.1.2"
+    sdk_language: "go"
+    mode: "v2-only"
+
+# -----------------------------------------------------------------------------
+# Signal Configuration - All Enabled
+# -----------------------------------------------------------------------------
+signals:
+  traces:
+    enabled: true
+  metrics:
+    enabled: true
+    exemplars: true
+  logs:
+    enabled: true
+
+# -----------------------------------------------------------------------------
+# Batching Configuration - Optimized for Production
+# -----------------------------------------------------------------------------
+batch:
+  timeout: "5s"
+  max_size: 1024
+
+# -----------------------------------------------------------------------------
+# Retry Configuration - Production Settings
+# -----------------------------------------------------------------------------
+retry:
+  enabled: true
+  max_attempts: 5
+  initial_backoff: "1s"
+  max_backoff: "30s"
+
+# -----------------------------------------------------------------------------
+# Compression - Enabled for Production
+# -----------------------------------------------------------------------------
+compression:
+  enabled: true
+  algorithm: "gzip"
+
+# -----------------------------------------------------------------------------
+# Rate Limiting - Production Settings
+# -----------------------------------------------------------------------------
+rate_limit:
+  requests_per_second: 10000
+
+# -----------------------------------------------------------------------------
+# gRPC Configuration - Production Optimized
+# -----------------------------------------------------------------------------
+grpc:
+  keepalive:
+    time: "30s"
+    timeout: "10s"
+    permit_without_stream: true
+  buffer_sizes:
+    read: 1048576   # 1 MB
+    write: 1048576  # 1 MB
+  message_sizes:
+    max_recv: 16777216  # 16 MiB
+    max_send: 16777216  # 16 MiB
+
+# -----------------------------------------------------------------------------
+# Custom Resource Attributes for v2-only Mode
+# -----------------------------------------------------------------------------
+resource_attributes:
+  telemetryflow.api.version: "v2"
+  telemetryflow.mode: "v2-only"

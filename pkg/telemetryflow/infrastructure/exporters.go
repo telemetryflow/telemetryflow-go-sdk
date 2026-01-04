@@ -163,6 +163,8 @@ func (f *OTLPExporterFactory) createHTTPTraceExporter(ctx context.Context) (sdkt
 		otlptracehttp.WithEndpoint(f.config.Endpoint()),
 		otlptracehttp.WithTimeout(f.config.Timeout()),
 		otlptracehttp.WithHeaders(f.getAuthHeaders()),
+		// Use v2 or v1 traces endpoint based on configuration (aligned with tfoexporter)
+		otlptracehttp.WithURLPath(f.config.TracesEndpoint()),
 	}
 
 	if f.config.IsInsecure() {
@@ -190,6 +192,8 @@ func (f *OTLPExporterFactory) createHTTPMetricExporter(ctx context.Context) (sdk
 		otlpmetrichttp.WithEndpoint(f.config.Endpoint()),
 		otlpmetrichttp.WithTimeout(f.config.Timeout()),
 		otlpmetrichttp.WithHeaders(f.getAuthHeaders()),
+		// Use v2 or v1 metrics endpoint based on configuration (aligned with tfoexporter)
+		otlpmetrichttp.WithURLPath(f.config.MetricsEndpoint()),
 	}
 
 	if f.config.IsInsecure() {
@@ -215,7 +219,7 @@ func (f *OTLPExporterFactory) createHTTPMetricExporter(ctx context.Context) (sdk
 // ===== HELPER METHODS =====
 
 // getAuthHeaders returns headers with TelemetryFlow authentication
-// Headers are aligned with TelemetryFlow Collector expected format
+// Headers are aligned with TelemetryFlow Collector expected format (tfoexporter, tfoauthextension)
 func (f *OTLPExporterFactory) getAuthHeaders() map[string]string {
 	headers := map[string]string{
 		"authorization":              f.config.Credentials().AuthorizationHeader(),
@@ -224,15 +228,35 @@ func (f *OTLPExporterFactory) getAuthHeaders() map[string]string {
 		"X-TelemetryFlow-Key-Secret": f.config.Credentials().KeySecret(),
 	}
 
-	// Add collector ID if configured
+	// Add collector identity headers (aligned with tfoidentityextension)
 	if f.config.CollectorID() != "" {
 		headers["X-TelemetryFlow-Collector-ID"] = f.config.CollectorID()
+	}
+	if f.config.CollectorName() != "" {
+		headers["X-TelemetryFlow-Collector-Name"] = f.config.CollectorName()
+	}
+	if f.config.CollectorHostname() != "" {
+		headers["X-TelemetryFlow-Collector-Hostname"] = f.config.CollectorHostname()
+	}
+
+	// Add environment and datacenter headers
+	if f.config.Environment() != "" {
+		headers["X-TelemetryFlow-Environment"] = f.config.Environment()
+	}
+	if f.config.Datacenter() != "" {
+		headers["X-TelemetryFlow-Datacenter"] = f.config.Datacenter()
+	}
+
+	// Add v2 API indicator if enabled
+	if f.config.UseV2API() {
+		headers["X-TelemetryFlow-API-Version"] = "v2"
 	}
 
 	return headers
 }
 
 // authInterceptor creates a gRPC interceptor that adds authentication
+// Headers are aligned with TelemetryFlow Collector expected format (tfoexporter, tfoauthextension, tfoidentityextension)
 func (f *OTLPExporterFactory) authInterceptor() grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
@@ -242,17 +266,46 @@ func (f *OTLPExporterFactory) authInterceptor() grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		// Add TelemetryFlow authentication headers to context
+		// Add TelemetryFlow authentication headers to context (aligned with tfoauthextension)
 		ctx = metadata.AppendToOutgoingContext(ctx,
 			"authorization", f.config.Credentials().AuthorizationHeader(),
 			"x-telemetryflow-key-id", f.config.Credentials().KeyID(),
 			"x-telemetryflow-key-secret", f.config.Credentials().KeySecret(),
 		)
 
-		// Add collector ID if configured
+		// Add collector identity headers (aligned with tfoidentityextension)
 		if f.config.CollectorID() != "" {
 			ctx = metadata.AppendToOutgoingContext(ctx,
 				"x-telemetryflow-collector-id", f.config.CollectorID(),
+			)
+		}
+		if f.config.CollectorName() != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-collector-name", f.config.CollectorName(),
+			)
+		}
+		if f.config.CollectorHostname() != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-collector-hostname", f.config.CollectorHostname(),
+			)
+		}
+
+		// Add environment and datacenter headers
+		if f.config.Environment() != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-environment", f.config.Environment(),
+			)
+		}
+		if f.config.Datacenter() != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-datacenter", f.config.Datacenter(),
+			)
+		}
+
+		// Add v2 API indicator if enabled
+		if f.config.UseV2API() {
+			ctx = metadata.AppendToOutgoingContext(ctx,
+				"x-telemetryflow-api-version", "v2",
 			)
 		}
 

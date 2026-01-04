@@ -7,7 +7,7 @@
 
   <h3>TelemetryFlow GO SDK</h3>
 
-[![Version](https://img.shields.io/badge/Version-1.1.1-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.1.2-orange.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
 [![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
@@ -29,10 +29,190 @@ All notable changes to the TelemetryFlow Go SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-01-04
+
+### Added
+
+#### TFO v2 API Support (aligned with tfoexporter)
+
+- **V2 Endpoint Configuration**: New methods for TFO v2 API endpoints
+  - `WithV2API(bool)` - Enable/disable v2 API (default: true)
+  - `WithV2Only()` - Enable v2-only mode (disables v1 endpoints)
+  - `WithTracesEndpoint(string)` - Custom traces endpoint path
+  - `WithMetricsEndpoint(string)` - Custom metrics endpoint path
+  - `WithLogsEndpoint(string)` - Custom logs endpoint path
+  - Default endpoints: `/v2/traces`, `/v2/metrics`, `/v2/logs`
+
+- **Config Getters**: New configuration accessors
+  - `UseV2API()` - Check if v2 API is enabled
+  - `IsV2Only()` - Check if v2-only mode is enabled
+  - `TracesEndpoint()` - Get traces endpoint path
+  - `MetricsEndpoint()` - Get metrics endpoint path
+  - `LogsEndpoint()` - Get logs endpoint path
+
+#### Collector Identity (aligned with tfoidentityextension)
+
+- **Identity Configuration**: New methods for collector identity
+  - `WithCollectorName(string)` - Set collector name
+  - `WithCollectorNameFromEnv()` - Read from `TELEMETRYFLOW_COLLECTOR_NAME`
+  - `WithCollectorDescription(string)` - Set collector description
+  - `WithCollectorHostname(string)` - Set collector hostname
+  - `WithCollectorTag(key, value)` - Add single tag
+  - `WithCollectorTags(map[string]string)` - Set all tags
+  - `WithEnrichResources(bool)` - Enable/disable resource enrichment
+  - `WithDatacenter(string)` - Set datacenter identifier
+  - `WithDatacenterFromEnv()` - Read from `TELEMETRYFLOW_DATACENTER`
+
+- **Identity Getters**: New configuration accessors
+  - `CollectorName()`, `CollectorDescription()`, `CollectorHostname()`
+  - `CollectorTags()`, `IsEnrichResourcesEnabled()`, `Datacenter()`
+
+#### Enhanced Headers (aligned with tfoauthextension)
+
+- **HTTP Headers**: New TelemetryFlow-specific headers
+  - `X-TelemetryFlow-Collector-Name` - Collector name
+  - `X-TelemetryFlow-Collector-Hostname` - Collector hostname
+  - `X-TelemetryFlow-Environment` - Deployment environment
+  - `X-TelemetryFlow-Datacenter` - Datacenter identifier
+  - `X-TelemetryFlow-API-Version` - API version indicator (v2)
+
+- **gRPC Metadata**: Same headers added to gRPC interceptor
+  - All headers in lowercase for gRPC metadata compliance
+
+#### TFO-Collector v1.1.2 Integration
+
+- **Unified TFO Configuration**: Added `configs/tfo-collector-unified.yaml` for full TFO v2-only mode
+  - v2 endpoints only with mandatory authentication (`v2_only: true`)
+  - TFO exporter enabled with dedicated instances for traces, metrics, and logs
+  - Auto-injected authentication via `tfoauth` extension
+  - Collector identity enrichment via `tfoidentity` extension
+
+- **TFO Custom Components Support**: Updated configurations for TFO-Collector OCB-native components
+  - `tfootlp` receiver - OTLP with dual v1/v2 endpoint support
+  - `tfo` exporter - Auto TFO authentication header injection
+  - `tfoauth` extension - Centralized API key management
+  - `tfoidentity` extension - Collector identity and resource enrichment
+
+- **Enhanced TFO Exporter Configuration**: Multiple dedicated TFO exporter instances
+  - `tfo/traces` - Trace-specific settings with queue size 2000
+  - `tfo/metrics` - Metrics-specific settings with queue size 1000
+  - `tfo/logs` - Logs-specific settings with queue size 1500
+  - All with gzip compression, retry policies, and sending queues
+
+#### SDK Configuration Files
+
+- **Default SDK Configuration**: Added `configs/sdk-default.yaml`
+  - Full configuration with all TFO v2 API settings
+  - Environment variable substitution support
+  - Collector identity, batching, retry, and gRPC settings
+  - Production-ready defaults with sensible values
+
+- **V2-Only SDK Configuration**: Added `configs/sdk-v2-only.yaml`
+  - TFO v2-only mode with mandatory authentication
+  - Production-optimized settings (compression, larger batches)
+  - Enhanced gRPC buffer and message sizes
+  - Complete collector identity configuration
+
+- **Minimal SDK Configuration**: Added `configs/sdk-minimal.yaml`
+  - Quick-start configuration with essential settings only
+  - Service name, credentials, and endpoint
+  - All signals enabled with TFO v2 API
+
+- **Updated .env.example**: Enhanced with TFO v2 API environment variables
+  - TFO v2 API settings: `TELEMETRYFLOW_USE_V2_API`, `TELEMETRYFLOW_V2_ONLY`
+  - Collector identity: `TELEMETRYFLOW_COLLECTOR_NAME`, `TELEMETRYFLOW_DATACENTER`
+  - Protocol and retry settings
+  - Batch and signal configuration
+
+### Changed
+
+- **HTTP Exporters**: Updated to use configurable URL paths
+  - `otlptracehttp.WithURLPath(config.TracesEndpoint())`
+  - `otlpmetrichttp.WithURLPath(config.MetricsEndpoint())`
+
+- **Builder Defaults**: Updated default values
+  - `useV2API: true` - v2 API enabled by default
+  - `enrichResources: true` - Resource enrichment enabled by default
+  - `datacenter: "default"` - Default datacenter value
+
+- **AutoConfiguration**: Extended to include new environment variables
+  - `WithCollectorNameFromEnv()` added to auto-configuration chain
+  - `WithDatacenterFromEnv()` added to auto-configuration chain
+
+- **Docker Compose**: Updated for TFO-Collector v1.1.2 OCB-native architecture
+  - Unified binary name: `tfo-collector` (no more `-ocb` suffix)
+  - Updated configuration mounts for new TFO config files
+  - Short flag support: `-c` for config, `-s` for set, `-f` for feature-gates
+
+- **OTEL Collector Configs**: Updated to align with OTEL 0.142.0
+  - Updated `configs/otel-collector.yaml` with latest best practices
+  - Added `configs/otel-collector-minimal.yaml` for quick start scenarios
+
+### Tests
+
+- **Domain Config Tests**: Added TFO v2 API test cases
+  - `TestTelemetryConfig_V2APIDefaults`
+  - `TestTelemetryConfig_WithV2API`
+  - `TestTelemetryConfig_WithV2Only`
+  - `TestTelemetryConfig_WithCustomEndpoints`
+  - `TestTelemetryConfig_CollectorIdentityDefaults`
+  - `TestTelemetryConfig_WithCollectorName`
+  - `TestTelemetryConfig_WithCollectorDescription`
+  - `TestTelemetryConfig_WithCollectorHostname`
+  - `TestTelemetryConfig_WithCollectorTags`
+  - `TestTelemetryConfig_WithEnrichResources`
+  - `TestTelemetryConfig_WithDatacenter`
+  - `TestTelemetryConfig_TFOv2FullChaining`
+
+- **Builder Tests**: Added TFO v2 API builder test cases
+  - `TestBuilder_WithV2API`
+  - `TestBuilder_WithV2Only`
+  - `TestBuilder_WithCustomEndpoints`
+  - `TestBuilder_WithCollectorName`
+  - `TestBuilder_WithCollectorNameFromEnv`
+  - `TestBuilder_WithCollectorDescription`
+  - `TestBuilder_WithCollectorHostname`
+  - `TestBuilder_WithCollectorTags`
+  - `TestBuilder_WithEnrichResources`
+  - `TestBuilder_WithDatacenter`
+  - `TestBuilder_WithDatacenterFromEnv`
+  - `TestBuilder_TFOv2FullChaining`
+
+- **Benchmarks**: Added TFO v2 benchmark
+  - `BenchmarkBuilder_BuildWithTFOv2`
+
+### Documentation
+
+- Updated configuration documentation for TFO-Collector v1.1.2
+- Added TFO v2 endpoint usage examples with authentication headers
+- Added TFO custom components reference table
+
+### Compatibility
+
+- TFO-Collector: v1.1.2 (OCB-native)
+- OpenTelemetry Collector: v0.142.0
+- OpenTelemetry Go SDK: v1.39.0
+
+---
+
 ## [1.1.1] - 2024-12-30
 
 ### Added
 
+- **Dual Endpoint Ingestion Support**: Updated docker-compose and OTEL collector configs for TFO-Collector dual ingestion
+  - v1 endpoints: Standard OTEL community format (`/v1/traces`, `/v1/metrics`, `/v1/logs`)
+  - v2 endpoints: TelemetryFlow enhanced format (`/v2/traces`, `/v2/metrics`, `/v2/logs`)
+  - gRPC endpoint: Same port (4317) for both v1 and v2
+- **TFO-Collector as Default**: Docker-compose now uses `telemetryflow/telemetryflow-collector` as default image
+  - Commented alternatives for TFO-Collector-OCB and OTEL Collector Contrib
+  - Separate volume mounts for each collector type
+- **Enhanced Port Configuration**: Added additional ports for observability
+  - zPages (55679) for debugging
+  - pprof (1777) for profiling
+  - Prometheus exporter (8889)
+- **Connectors for Exemplars**: Added spanmetrics and servicegraph connectors
+  - Metrics-to-traces correlation with exemplars enabled
+  - Service dependency graph generation
 - **Comprehensive Unit Tests**: Added unit tests for all DDD layers following external test package pattern
   - `tests/unit/domain/` - Credentials and Config domain tests
   - `tests/unit/application/` - Command and Query tests
@@ -439,6 +619,7 @@ None at this time.
 
 ---
 
+[1.1.2]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/telemetryflow/telemetryflow-go-sdk/compare/v1.0.0...v1.0.1

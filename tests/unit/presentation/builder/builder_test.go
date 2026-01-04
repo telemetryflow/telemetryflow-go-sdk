@@ -414,6 +414,271 @@ func TestNewSimple(t *testing.T) {
 	})
 }
 
+// =============================================================================
+// TFO v2 API Builder Tests (aligned with tfoexporter)
+// =============================================================================
+
+func TestBuilder_WithV2API(t *testing.T) {
+	t.Run("should enable v2 API by default", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			Build()
+
+		require.NoError(t, err)
+		assert.True(t, client.Config().UseV2API())
+	})
+
+	t.Run("should disable v2 API", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithV2API(false).
+			Build()
+
+		require.NoError(t, err)
+		assert.False(t, client.Config().UseV2API())
+		assert.Equal(t, "/v1/traces", client.Config().TracesEndpoint())
+		assert.Equal(t, "/v1/metrics", client.Config().MetricsEndpoint())
+		assert.Equal(t, "/v1/logs", client.Config().LogsEndpoint())
+	})
+}
+
+func TestBuilder_WithV2Only(t *testing.T) {
+	t.Run("should enable v2-only mode", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithV2Only().
+			Build()
+
+		require.NoError(t, err)
+		assert.True(t, client.Config().IsV2Only())
+		assert.True(t, client.Config().UseV2API()) // v2Only implies useV2API
+	})
+}
+
+func TestBuilder_WithCustomEndpoints(t *testing.T) {
+	t.Run("should set custom endpoint paths", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithTracesEndpoint("/custom/traces").
+			WithMetricsEndpoint("/custom/metrics").
+			WithLogsEndpoint("/custom/logs").
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "/custom/traces", client.Config().TracesEndpoint())
+		assert.Equal(t, "/custom/metrics", client.Config().MetricsEndpoint())
+		assert.Equal(t, "/custom/logs", client.Config().LogsEndpoint())
+	})
+}
+
+// =============================================================================
+// Collector Identity Builder Tests (aligned with tfoidentityextension)
+// =============================================================================
+
+func TestBuilder_WithCollectorName(t *testing.T) {
+	t.Run("should set collector name", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorName("TFO SDK Client").
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "TFO SDK Client", client.Config().CollectorName())
+	})
+}
+
+func TestBuilder_WithCollectorNameFromEnv(t *testing.T) {
+	t.Run("should read collector name from environment", func(t *testing.T) {
+		t.Setenv("TELEMETRYFLOW_COLLECTOR_NAME", "Env Collector Name")
+
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorNameFromEnv().
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "Env Collector Name", client.Config().CollectorName())
+	})
+}
+
+func TestBuilder_WithCollectorDescription(t *testing.T) {
+	t.Run("should set collector description", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorDescription("TelemetryFlow Go SDK embedded collector").
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "TelemetryFlow Go SDK embedded collector", client.Config().CollectorDescription())
+	})
+}
+
+func TestBuilder_WithCollectorHostname(t *testing.T) {
+	t.Run("should set collector hostname", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorHostname("app-server-01").
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "app-server-01", client.Config().CollectorHostname())
+	})
+}
+
+func TestBuilder_WithCollectorTags(t *testing.T) {
+	t.Run("should set single collector tag", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorTag("environment", "production").
+			Build()
+
+		require.NoError(t, err)
+		tags := client.Config().CollectorTags()
+		assert.Equal(t, "production", tags["environment"])
+	})
+
+	t.Run("should set all collector tags", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithCollectorTags(map[string]string{
+				"environment": "staging",
+				"datacenter":  "us-east-1",
+				"team":        "platform",
+			}).
+			Build()
+
+		require.NoError(t, err)
+		tags := client.Config().CollectorTags()
+		assert.Len(t, tags, 3)
+		assert.Equal(t, "staging", tags["environment"])
+		assert.Equal(t, "us-east-1", tags["datacenter"])
+		assert.Equal(t, "platform", tags["team"])
+	})
+}
+
+func TestBuilder_WithEnrichResources(t *testing.T) {
+	t.Run("should enable resource enrichment by default", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			Build()
+
+		require.NoError(t, err)
+		assert.True(t, client.Config().IsEnrichResourcesEnabled())
+	})
+
+	t.Run("should disable resource enrichment", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithEnrichResources(false).
+			Build()
+
+		require.NoError(t, err)
+		assert.False(t, client.Config().IsEnrichResourcesEnabled())
+	})
+}
+
+func TestBuilder_WithDatacenter(t *testing.T) {
+	t.Run("should set datacenter", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithDatacenter("aws-us-east-1").
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "aws-us-east-1", client.Config().Datacenter())
+	})
+}
+
+func TestBuilder_WithDatacenterFromEnv(t *testing.T) {
+	t.Run("should read datacenter from environment", func(t *testing.T) {
+		t.Setenv("TELEMETRYFLOW_DATACENTER", "env-datacenter")
+
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithDatacenterFromEnv().
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "env-datacenter", client.Config().Datacenter())
+	})
+
+	t.Run("should use default when env not set", func(t *testing.T) {
+		t.Setenv("TELEMETRYFLOW_DATACENTER", "")
+
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithDatacenterFromEnv().
+			Build()
+
+		require.NoError(t, err)
+		assert.Equal(t, "default", client.Config().Datacenter())
+	})
+}
+
+func TestBuilder_TFOv2FullChaining(t *testing.T) {
+	t.Run("should support full TFO v2 method chaining", func(t *testing.T) {
+		client, err := telemetryflow.NewBuilder().
+			WithAPIKey("tfk_test", "tfs_secret").
+			WithEndpoint("localhost:4317").
+			WithService("test-service", "1.0.0").
+			WithEnvironment("production").
+			WithV2API(true).
+			WithV2Only().
+			WithCollectorName("TFO SDK v2").
+			WithCollectorDescription("TelemetryFlow Go SDK - TFO v2 mode").
+			WithCollectorHostname("app-server-01").
+			WithCollectorTag("mode", "unified-v2").
+			WithDatacenter("aws-us-east-1").
+			WithEnrichResources(true).
+			Build()
+
+		require.NoError(t, err)
+		config := client.Config()
+
+		assert.True(t, config.UseV2API())
+		assert.True(t, config.IsV2Only())
+		assert.Equal(t, "TFO SDK v2", config.CollectorName())
+		assert.Equal(t, "TelemetryFlow Go SDK - TFO v2 mode", config.CollectorDescription())
+		assert.Equal(t, "app-server-01", config.CollectorHostname())
+		assert.Equal(t, "aws-us-east-1", config.Datacenter())
+		assert.True(t, config.IsEnrichResourcesEnabled())
+		assert.Equal(t, "unified-v2", config.CollectorTags()["mode"])
+		assert.Equal(t, "/v2/traces", config.TracesEndpoint())
+		assert.Equal(t, "/v2/metrics", config.MetricsEndpoint())
+		assert.Equal(t, "/v2/logs", config.LogsEndpoint())
+	})
+}
+
 // Benchmark tests
 func BenchmarkBuilder_Build(b *testing.B) {
 	b.ResetTimer()
@@ -422,6 +687,21 @@ func BenchmarkBuilder_Build(b *testing.B) {
 			WithAPIKey("tfk_bench", "tfs_bench").
 			WithEndpoint("localhost:4317").
 			WithService("bench-service", "1.0.0").
+			Build()
+	}
+}
+
+func BenchmarkBuilder_BuildWithTFOv2(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = telemetryflow.NewBuilder().
+			WithAPIKey("tfk_bench", "tfs_bench").
+			WithEndpoint("localhost:4317").
+			WithService("bench-service", "1.0.0").
+			WithV2Only().
+			WithCollectorName("TFO SDK Bench").
+			WithCollectorTag("mode", "benchmark").
+			WithDatacenter("bench-dc").
 			Build()
 	}
 }

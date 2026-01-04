@@ -1,0 +1,42 @@
+# =============================================================================
+# TelemetryFlow Go SDK - Minimal Configuration
+# =============================================================================
+# Minimal configuration for quick start and development.
+# Uses sensible defaults for most settings.
+#
+# Usage in Go:
+#   client, err := telemetryflow.NewBuilder().
+#       WithConfigFile("configs/sdk-minimal.yaml").
+#       Build()
+#
+# Or even simpler (environment variables):
+#   client, err := telemetryflow.NewFromEnv()
+# =============================================================================
+
+# Service info (required)
+service:
+  name: "${TELEMETRYFLOW_SERVICE_NAME:my-service}"
+  version: "${TELEMETRYFLOW_SERVICE_VERSION:1.0.0}"
+
+# API credentials (required)
+credentials:
+  key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+
+# Endpoint (required)
+endpoint:
+  address: "${TELEMETRYFLOW_ENDPOINT:localhost:4317}"
+  insecure: true
+
+# TFO v2 API (defaults enabled)
+v2_api:
+  enabled: true
+
+# All signals enabled by default
+signals:
+  traces:
+    enabled: true
+  metrics:
+    enabled: true
+  logs:
+    enabled: true

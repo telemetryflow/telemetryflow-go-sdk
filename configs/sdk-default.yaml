@@ -1,0 +1,184 @@
+# =============================================================================
+# TelemetryFlow Go SDK - Default Configuration
+# =============================================================================
+# This is the default SDK configuration for TelemetryFlow Go SDK v1.1.2
+# Compatible with TFO-Collector v1.1.2 (OCB-native)
+#
+# Usage in Go:
+#   client, err := telemetryflow.NewBuilder().
+#       WithConfigFile("configs/sdk-default.yaml").
+#       Build()
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# SDK Version Info
+# -----------------------------------------------------------------------------
+version: "1.1.2"
+tfo_collector_version: "1.1.2"
+otel_version: "0.142.0"
+
+# -----------------------------------------------------------------------------
+# Service Configuration
+# -----------------------------------------------------------------------------
+service:
+  name: "${TELEMETRYFLOW_SERVICE_NAME:my-service}"
+  version: "${TELEMETRYFLOW_SERVICE_VERSION:1.0.0}"
+  namespace: "${TELEMETRYFLOW_SERVICE_NAMESPACE:telemetryflow}"
+  environment: "${TELEMETRYFLOW_ENVIRONMENT:development}"
+
+# -----------------------------------------------------------------------------
+# TelemetryFlow API Authentication
+# -----------------------------------------------------------------------------
+# API Key format:
+#   - Key ID: tfk_<unique_identifier>
+#   - Key Secret: tfs_<secret_value>
+# -----------------------------------------------------------------------------
+credentials:
+  key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+
+# -----------------------------------------------------------------------------
+# Endpoint Configuration
+# -----------------------------------------------------------------------------
+endpoint:
+  # OTLP endpoint (gRPC default port: 4317, HTTP default port: 4318)
+  address: "${TELEMETRYFLOW_ENDPOINT:localhost:4317}"
+
+  # Protocol: grpc or http
+  protocol: "${TELEMETRYFLOW_PROTOCOL:grpc}"
+
+  # TLS/SSL settings
+  insecure: ${TELEMETRYFLOW_INSECURE:true}
+
+  # Request timeout (duration format: 10s, 30s, 1m)
+  timeout: "${TELEMETRYFLOW_TIMEOUT:10s}"
+
+# -----------------------------------------------------------------------------
+# TFO v2 API Configuration (aligned with tfoexporter)
+# -----------------------------------------------------------------------------
+# TFO v2 API provides enhanced endpoint paths for TelemetryFlow Platform
+# Default endpoints:
+#   - v2: /v2/traces, /v2/metrics, /v2/logs
+#   - v1: /v1/traces, /v1/metrics, /v1/logs
+# -----------------------------------------------------------------------------
+v2_api:
+  # Enable TFO v2 API endpoints (default: true)
+  enabled: ${TELEMETRYFLOW_USE_V2_API:true}
+
+  # v2-only mode: disable v1 endpoints entirely
+  v2_only: ${TELEMETRYFLOW_V2_ONLY:false}
+
+  # Custom endpoint paths (optional, uses defaults based on v2 enabled state)
+  # traces_endpoint: "/v2/traces"
+  # metrics_endpoint: "/v2/metrics"
+  # logs_endpoint: "/v2/logs"
+
+# -----------------------------------------------------------------------------
+# Collector Identity (aligned with tfoidentityextension)
+# -----------------------------------------------------------------------------
+# Identity information sent to TFO-Collector for tracking and correlation
+# -----------------------------------------------------------------------------
+collector:
+  # Unique collector identifier
+  id: "${TELEMETRYFLOW_COLLECTOR_ID:}"
+
+  # Human-readable collector name
+  name: "${TELEMETRYFLOW_COLLECTOR_NAME:TelemetryFlow Go SDK}"
+
+  # Collector description
+  description: "TelemetryFlow Go SDK embedded collector"
+
+  # Hostname where the SDK is running
+  hostname: "${TELEMETRYFLOW_COLLECTOR_HOSTNAME:}"
+
+  # Datacenter/region identifier
+  datacenter: "${TELEMETRYFLOW_DATACENTER:default}"
+
+  # Enable resource attribute enrichment
+  enrich_resources: ${TELEMETRYFLOW_ENRICH_RESOURCES:true}
+
+  # Custom tags for collector identification
+  tags:
+    sdk_version: "1.1.2"
+    sdk_language: "go"
+    # environment: "production"
+    # team: "platform"
+
+# -----------------------------------------------------------------------------
+# Signal Configuration
+# -----------------------------------------------------------------------------
+# Enable/disable specific telemetry signals
+# -----------------------------------------------------------------------------
+signals:
+  traces:
+    enabled: ${TELEMETRYFLOW_ENABLE_TRACES:true}
+  metrics:
+    enabled: ${TELEMETRYFLOW_ENABLE_METRICS:true}
+    # Enable exemplars for metrics-to-traces correlation
+    exemplars: ${TELEMETRYFLOW_ENABLE_EXEMPLARS:true}
+  logs:
+    enabled: ${TELEMETRYFLOW_ENABLE_LOGS:true}
+
+# -----------------------------------------------------------------------------
+# Batching Configuration
+# -----------------------------------------------------------------------------
+# Batch settings for efficient telemetry export
+# -----------------------------------------------------------------------------
+batch:
+  # Maximum time to wait before sending a batch
+  timeout: "${TELEMETRYFLOW_BATCH_TIMEOUT:5s}"
+
+  # Maximum number of items in a batch
+  max_size: ${TELEMETRYFLOW_BATCH_MAX_SIZE:512}
+
+# -----------------------------------------------------------------------------
+# Retry Configuration
+# -----------------------------------------------------------------------------
+# Retry settings for handling transient failures
+# -----------------------------------------------------------------------------
+retry:
+  enabled: ${TELEMETRYFLOW_RETRY_ENABLED:true}
+  max_attempts: ${TELEMETRYFLOW_MAX_RETRIES:3}
+  initial_backoff: "${TELEMETRYFLOW_RETRY_BACKOFF:500ms}"
+  max_backoff: "5s"
+
+# -----------------------------------------------------------------------------
+# Compression Configuration
+# -----------------------------------------------------------------------------
+compression:
+  enabled: ${TELEMETRYFLOW_COMPRESSION:false}
+  # Algorithm: gzip (default when enabled)
+  algorithm: "gzip"
+
+# -----------------------------------------------------------------------------
+# Rate Limiting
+# -----------------------------------------------------------------------------
+rate_limit:
+  # Maximum requests per second (0 = unlimited)
+  requests_per_second: ${TELEMETRYFLOW_RATE_LIMIT:0}
+
+# -----------------------------------------------------------------------------
+# Custom Resource Attributes
+# -----------------------------------------------------------------------------
+# Additional attributes to add to all telemetry data
+# -----------------------------------------------------------------------------
+resource_attributes:
+  # deployment.environment: "production"
+  # cloud.provider: "aws"
+  # cloud.region: "us-east-1"
+  # k8s.cluster.name: "production-cluster"
+
+# -----------------------------------------------------------------------------
+# gRPC Configuration (when protocol is grpc)
+# -----------------------------------------------------------------------------
+grpc:
+  keepalive:
+    time: "10s"
+    timeout: "5s"
+    permit_without_stream: true
+  buffer_sizes:
+    read: 524288   # 512 KB
+    write: 524288  # 512 KB
+  message_sizes:
+    max_recv: 4194304  # 4 MiB
+    max_send: 4194304  # 4 MiB
