@@ -16,9 +16,9 @@ import (
 
 // HTTPMiddleware provides auto-instrumentation for net/http handlers
 type HTTPMiddleware struct {
-	tracer       trace.Tracer
-	config       *Config
-	metrics      *HTTPRequestMetrics
+	tracer        trace.Tracer
+	config        *Config
+	metrics       *HTTPRequestMetrics
 	spanFormatter SpanNameFormatter
 }
 

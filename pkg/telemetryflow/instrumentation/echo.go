@@ -17,7 +17,9 @@ import (
 // EchoContext is an interface that matches echo.Context
 // This allows the instrumentation to work without importing Echo directly
 type EchoContext interface {
-	Request() interface{ Header() interface{ Get(string) string } }
+	Request() interface {
+		Header() interface{ Get(string) string }
+	}
 	Response() interface {
 		Status() int
 		Size() int64
@@ -47,7 +49,7 @@ func DefaultEchoMiddlewareConfig() *EchoMiddlewareConfig {
 	}
 }
 
-// EchoMiddleware creates an Echo middleware function for tracing and metrics.
+// EchoMiddlewareFunc creates an Echo middleware function for tracing and metrics.
 // This returns a generic middleware function that wraps the Echo handler.
 //
 // Usage with Echo:
@@ -192,7 +194,7 @@ func (h *EchoInstrumentationHelper) SetSpanStatus(span trace.Span, statusCode in
 // RecordMetrics records HTTP request metrics
 func (h *EchoInstrumentationHelper) RecordMetrics(method, path string, statusCode int, duration time.Duration, requestSize, responseSize int64) {
 	if h.metrics != nil {
-		h.metrics.RecordRequest(nil, method, path, statusCode, duration, requestSize, responseSize)
+		h.metrics.RecordRequest(context.Background(), method, path, statusCode, duration, requestSize, responseSize)
 	}
 }
 

@@ -122,11 +122,11 @@ func ApplyOptions(opts ...Option) *Config {
 
 // HTTPRequestMetrics holds metrics for HTTP requests
 type HTTPRequestMetrics struct {
-	RequestCounter    metric.Int64Counter
-	RequestDuration   metric.Float64Histogram
-	RequestBodySize   metric.Int64Histogram
-	ResponseBodySize  metric.Int64Histogram
-	ActiveRequests    metric.Int64UpDownCounter
+	RequestCounter   metric.Int64Counter
+	RequestDuration  metric.Float64Histogram
+	RequestBodySize  metric.Int64Histogram
+	ResponseBodySize metric.Int64Histogram
+	ActiveRequests   metric.Int64UpDownCounter
 }
 
 // NewHTTPRequestMetrics creates HTTP request metrics
