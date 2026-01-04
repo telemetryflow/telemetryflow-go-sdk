@@ -1,7 +1,7 @@
 // Package main demonstrates TelemetryFlow SDK v1.1.2 integration with an HTTP server.
 //
 // This example shows:
-// - HTTP middleware for automatic request tracing
+// - HTTP auto-instrumentation middleware for automatic request tracing
 // - Request duration histograms
 // - Error counting and logging
 // - TFO v2 API with collector identity
@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/telemetryflow/telemetryflow-go-sdk/pkg/telemetryflow"
+	"github.com/telemetryflow/telemetryflow-go-sdk/pkg/telemetryflow/instrumentation"
 )
 
 var client *telemetryflow.Client
@@ -65,15 +66,22 @@ func main() {
 		log.Fatalf("Failed to initialize TelemetryFlow: %v", err)
 	}
 
-	// Create HTTP server with telemetry middleware
+	// Create HTTP server with auto-instrumentation middleware
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleHome)
 	mux.HandleFunc("/api/users", handleUsers)
 	mux.HandleFunc("/api/orders", handleOrders)
 	mux.HandleFunc("/health", handleHealth)
 
-	// Wrap with telemetry middleware
-	handler := TelemetryMiddleware(mux)
+	// Create auto-instrumentation middleware with TelemetryFlow
+	httpMiddleware := instrumentation.NewHTTPMiddleware(
+		instrumentation.WithServiceInfo("http-server-example", "1.1.2"),
+		instrumentation.WithMetrics(true),
+		instrumentation.WithTracing(true),
+	)
+
+	// Wrap with auto-instrumentation middleware
+	handler := httpMiddleware.Handler(mux)
 
 	server := &http.Server{
 		Addr:         ":8080",
