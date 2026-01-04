@@ -1,10 +1,13 @@
-// Package main demonstrates TelemetryFlow SDK integration with an HTTP server.
+// Package main demonstrates TelemetryFlow SDK v1.1.2 integration with an HTTP server.
 //
 // This example shows:
 // - HTTP middleware for automatic request tracing
 // - Request duration histograms
 // - Error counting and logging
+// - TFO v2 API with collector identity
 // - Graceful shutdown with telemetry flush
+//
+// Compatible with TFO-Collector v1.1.2 (OCB-native)
 //
 // Run with:
 //
@@ -30,15 +33,27 @@ import (
 var client *telemetryflow.Client
 
 func main() {
-	// Initialize TelemetryFlow client
+	// Initialize TelemetryFlow client with TFO v2 API support
 	var err error
 	client, err = telemetryflow.NewBuilder().
 		WithAPIKeyFromEnv().
 		WithEndpointFromEnv().
-		WithService("http-server-example", "1.0.0").
+		WithService("http-server-example", "1.1.2").
+		WithServiceNamespace("telemetryflow").
 		WithEnvironmentFromEnv().
 		WithGRPC().
+		// TFO v2 API settings (aligned with tfoexporter)
+		WithV2API(true).
+		// Collector Identity (aligned with tfoidentityextension)
+		WithCollectorName("HTTP Server Example").
+		WithCollectorDescription("TelemetryFlow Go SDK HTTP server example").
+		WithDatacenterFromEnv().
+		WithEnrichResources(true).
+		// Enable exemplars for metrics-to-traces correlation
+		WithExemplars(true).
+		// Custom attributes
 		WithCustomAttribute("example", "http-server").
+		WithCustomAttribute("sdk_version", "1.1.2").
 		Build()
 
 	if err != nil {

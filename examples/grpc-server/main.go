@@ -1,10 +1,13 @@
-// Package main demonstrates TelemetryFlow SDK integration with a gRPC server.
+// Package main demonstrates TelemetryFlow SDK v1.1.2 integration with a gRPC server.
 //
 // This example shows:
 // - gRPC unary and streaming interceptors for tracing
 // - RPC metrics (latency, errors, call counts)
 // - Service-level health monitoring
+// - TFO v2 API with collector identity
 // - Graceful shutdown
+//
+// Compatible with TFO-Collector v1.1.2 (OCB-native)
 //
 // Note: This example simulates gRPC patterns without the full gRPC dependency
 // to keep the example self-contained. In a real application, you would use
@@ -63,16 +66,28 @@ type OrderService struct {
 }
 
 func main() {
-	// Initialize TelemetryFlow client
+	// Initialize TelemetryFlow client with TFO v2 API support
 	var err error
 	client, err = telemetryflow.NewBuilder().
 		WithAPIKeyFromEnv().
 		WithEndpointFromEnv().
-		WithService("grpc-server-example", "1.0.0").
+		WithService("grpc-server-example", "1.1.2").
+		WithServiceNamespace("telemetryflow").
 		WithEnvironmentFromEnv().
 		WithGRPC().
+		// TFO v2 API settings (aligned with tfoexporter)
+		WithV2API(true).
+		// Collector Identity (aligned with tfoidentityextension)
+		WithCollectorName("gRPC Server Example").
+		WithCollectorDescription("TelemetryFlow Go SDK gRPC server example").
+		WithDatacenterFromEnv().
+		WithEnrichResources(true).
+		// Enable exemplars for metrics-to-traces correlation
+		WithExemplars(true).
+		// Custom attributes
 		WithCustomAttribute("example", "grpc-server").
 		WithCustomAttribute("grpc.port", "50051").
+		WithCustomAttribute("sdk_version", "1.1.2").
 		Build()
 
 	if err != nil {

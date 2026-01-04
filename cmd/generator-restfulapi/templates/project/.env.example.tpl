@@ -52,14 +52,45 @@ RATE_LIMIT_WINDOW=1m
 {{- if .EnableTelemetry}}
 
 #================================================================================================
-# TELEMETRYFLOW / OPENTELEMETRY
+# TELEMETRYFLOW SDK - Core Settings
+# Compatible with TFO-Collector v1.1.2 (OCB-native)
 #================================================================================================
 TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id
 TELEMETRYFLOW_API_KEY_SECRET=tfs_your_key_secret
 TELEMETRYFLOW_ENDPOINT=localhost:4317
 TELEMETRYFLOW_SERVICE_NAME={{.ServiceName}}
 TELEMETRYFLOW_SERVICE_VERSION={{.ServiceVersion}}
+TELEMETRYFLOW_SERVICE_NAMESPACE=telemetryflow
+TELEMETRYFLOW_ENVIRONMENT={{.Environment}}
 TELEMETRYFLOW_INSECURE=true
+
+# TFO v2 API Settings (aligned with tfoexporter)
+TELEMETRYFLOW_USE_V2_API=true
+TELEMETRYFLOW_V2_ONLY=false
+
+# Collector Identity (aligned with tfoidentityextension)
+TELEMETRYFLOW_COLLECTOR_ID=
+TELEMETRYFLOW_COLLECTOR_NAME={{.ServiceName}} SDK Client
+TELEMETRYFLOW_DATACENTER=default
+TELEMETRYFLOW_ENRICH_RESOURCES=true
+
+# Signals Configuration
+TELEMETRYFLOW_ENABLE_TRACES=true
+TELEMETRYFLOW_ENABLE_METRICS=true
+TELEMETRYFLOW_ENABLE_LOGS=true
+TELEMETRYFLOW_ENABLE_EXEMPLARS=true
+
+# Performance Settings
+TELEMETRYFLOW_TIMEOUT=10
+TELEMETRYFLOW_BATCH_TIMEOUT=5000
+TELEMETRYFLOW_BATCH_MAX_SIZE=512
+TELEMETRYFLOW_COMPRESSION=false
+TELEMETRYFLOW_RATE_LIMIT=0
+
+# Retry Settings
+TELEMETRYFLOW_RETRY_ENABLED=true
+TELEMETRYFLOW_MAX_RETRIES=3
+TELEMETRYFLOW_RETRY_BACKOFF=500
 {{- end}}
 
 #================================================================================================
