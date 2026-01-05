@@ -99,6 +99,7 @@ help:
 	@echo "$(YELLOW)Dependencies:$(NC)"
 	@echo "  make deps             - Download dependencies"
 	@echo "  make deps-update      - Update dependencies"
+	@echo "  make deps-refresh     - Refresh private module checksums"
 	@echo "  make tidy             - Tidy go modules"
 	@echo "  make verify           - Verify dependencies"
 	@echo ""
@@ -374,7 +375,7 @@ docker-push: docker-build
 # These targets are optimized for CI environments with race detection,
 # coverage output, and atomic mode for accurate coverage in concurrent tests.
 
-.PHONY: fmt-check deps-verify staticcheck test-unit-ci test-integration-ci test-e2e-ci security govulncheck coverage-merge coverage-report ci-build-gen ci-build-restapi ci-lint ci-test ci-build
+.PHONY: fmt-check deps-verify deps-refresh staticcheck test-unit-ci test-integration-ci test-e2e-ci security govulncheck coverage-merge coverage-report ci-build-gen ci-build-restapi ci-lint ci-test ci-build
 
 ## CI: Check formatting (fails if code needs formatting)
 fmt-check:
@@ -392,6 +393,20 @@ deps-verify:
 	@$(GOMOD) download
 	@$(GOMOD) verify
 	@echo "$(GREEN)Dependencies verified$(NC)"
+
+## CI: Refresh private module checksums (for re-tagged modules)
+deps-refresh:
+	@echo "$(GREEN)Refreshing private module checksums...$(NC)"
+	@echo "$(YELLOW)Clearing cached telemetryflow modules...$(NC)"
+	@go clean -modcache -i github.com/telemetryflow/... 2>/dev/null || true
+	@echo "$(YELLOW)Removing old go.sum entries for telemetryflow...$(NC)"
+	@if [ -f go.sum ]; then \
+		grep -v "github.com/telemetryflow/" go.sum > go.sum.tmp && mv go.sum.tmp go.sum || true; \
+	fi
+	@echo "$(GREEN)Re-downloading dependencies with fresh checksums...$(NC)"
+	@$(GOMOD) download
+	@$(GOMOD) tidy
+	@echo "$(GREEN)Dependencies refreshed with new checksums$(NC)"
 
 ## CI: Install and run staticcheck
 staticcheck:

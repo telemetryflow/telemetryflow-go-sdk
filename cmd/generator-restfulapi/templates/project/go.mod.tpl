@@ -20,7 +20,7 @@ require (
 {{- end}}
 	gorm.io/gorm v1.25.12
 {{- if .EnableTelemetry}}
-	github.com/telemetryflow/telemetryflow-go-sdk v1.1.1
+	github.com/telemetryflow/telemetryflow-go-sdk v1.1.2
 {{- end}}
 {{- if .EnableAuth}}
 	github.com/golang-jwt/jwt/v5 v5.3.0
