@@ -234,8 +234,18 @@ type TemplateData struct {
 	EntityNamePlural string
 	EntityFields     []EntityField
 
+	// Entities (for documentation generation)
+	Entities []EntityInfo
+
 	// Computed
 	Timestamp string
+}
+
+// EntityInfo represents entity information for documentation
+type EntityInfo struct {
+	Name       string
+	PluralName string
+	Fields     []EntityField
 }
 
 // EntityField represents a field in an entity
@@ -569,6 +579,7 @@ func loadTemplate(name string) (*template.Template, error) {
 		"trimSuffix": strings.TrimSuffix,
 		"trimPrefix": strings.TrimPrefix,
 		"add":        func(a, b int) int { return a + b },
+		"isLast":     func(i int, slice interface{}) bool { return isLastIndex(i, slice) },
 	}
 
 	if templateDir != "" {
@@ -686,4 +697,18 @@ func pluralize(s string) string {
 		return s[:len(s)-1] + "ies"
 	}
 	return s + "s"
+}
+
+// isLastIndex checks if the index is the last element in a slice
+func isLastIndex(i int, slice interface{}) bool {
+	switch s := slice.(type) {
+	case []EntityField:
+		return i == len(s)-1
+	case []EntityInfo:
+		return i == len(s)-1
+	case []string:
+		return i == len(s)-1
+	default:
+		return false
+	}
 }
