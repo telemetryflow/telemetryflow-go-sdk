@@ -3,6 +3,10 @@ package http
 
 import (
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
+{{- if .EnableTelemetry}}
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+{{- end}}
+
 	"{{.ModulePath}}/internal/infrastructure/http/handler"
 	"{{.ModulePath}}/internal/infrastructure/http/middleware"
 )
@@ -14,6 +18,12 @@ func (s *Server) setupRoutes() {
 	// Global middleware
 	e.Use(echoMiddleware.Recover())
 	e.Use(echoMiddleware.RequestID())
+{{- if .EnableTelemetry}}
+
+	// OpenTelemetry auto-instrumentation for HTTP
+	e.Use(otelecho.Middleware(s.config.Telemetry.ServiceName))
+{{- end}}
+
 	e.Use(middleware.Logger())
 {{- if .EnableCORS}}
 	e.Use(middleware.CORS())
@@ -26,6 +36,16 @@ func (s *Server) setupRoutes() {
 	healthHandler := handler.NewHealthHandler(s.db)
 	e.GET("/health", healthHandler.Health)
 	e.GET("/ready", healthHandler.Ready)
+
+	// Home endpoint
+	homeHandler := handler.NewHomeHandler()
+	e.GET("/", homeHandler.Home)
+{{- if .EnableSwagger}}
+
+	// Swagger documentation
+	swaggerHandler := handler.NewSwaggerHandler("{{.ServiceName}} API")
+	swaggerHandler.RegisterRoutes(e)
+{{- end}}
 
 	// API v1 routes
 	v1 := e.Group("/api/v1")
@@ -46,10 +66,4 @@ func (s *Server) setupRoutes() {
 		_ = v1
 {{- end}}
 	}
-
-{{- if .EnableSwagger}}
-
-	// Swagger documentation
-	// e.GET("/swagger/*", echoSwagger.WrapHandler)
-{{- end}}
 }

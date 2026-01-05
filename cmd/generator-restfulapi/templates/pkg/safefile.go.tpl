@@ -1,8 +1,8 @@
-// Package pkg provides utility functions for {{.ProjectName}}.
+// Package safefile provides utility functions for safe file operations.
 //
 // This file contains security utilities for safe file operations,
 // addressing gosec G304 (potential file inclusion via variable).
-package pkg
+package safefile
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 //
 // Example usage:
 //
-//	safePath, err := pkg.SafePath("/app/uploads", userInput)
+//	safePath, err := safefile.SafePath("/app/uploads", userInput)
 //	if err != nil {
 //	    return fmt.Errorf("invalid path: %w", err)
 //	}
@@ -45,7 +45,7 @@ func SafePath(baseDir, relativePath string) (string, error) {
 //
 // Example usage:
 //
-//	content, err := pkg.SafeReadFile("/app/config/settings.yaml")
+//	content, err := safefile.SafeReadFile("/app/config/settings.yaml")
 //	if err != nil {
 //	    return fmt.Errorf("failed to read config: %w", err)
 //	}
@@ -70,7 +70,7 @@ func SafeReadFile(filePath string) ([]byte, error) {
 //
 // Example usage:
 //
-//	content, err := pkg.SafeReadFileInDir("/app/uploads", userFileName)
+//	content, err := safefile.SafeReadFileInDir("/app/uploads", userFileName)
 //	if err != nil {
 //	    return fmt.Errorf("failed to read file: %w", err)
 //	}
@@ -87,7 +87,7 @@ func SafeReadFileInDir(baseDir, relativePath string) ([]byte, error) {
 //
 // Example usage:
 //
-//	err := pkg.SafeWriteFile("/app/data/output.json", jsonData, 0644)
+//	err := safefile.SafeWriteFile("/app/data/output.json", jsonData, 0644)
 //	if err != nil {
 //	    return fmt.Errorf("failed to write file: %w", err)
 //	}
@@ -117,7 +117,7 @@ func SafeWriteFile(filePath string, data []byte, perm os.FileMode) error {
 //
 // Example usage:
 //
-//	err := pkg.SafeWriteFileInDir("/app/uploads", userFileName, data, 0644)
+//	err := safefile.SafeWriteFileInDir("/app/uploads", userFileName, data, 0644)
 //	if err != nil {
 //	    return fmt.Errorf("failed to write file: %w", err)
 //	}
@@ -134,7 +134,7 @@ func SafeWriteFileInDir(baseDir, relativePath string, data []byte, perm os.FileM
 //
 // Example usage:
 //
-//	file, err := pkg.SafeOpen("/app/config/settings.yaml")
+//	file, err := safefile.SafeOpen("/app/config/settings.yaml")
 //	if err != nil {
 //	    return fmt.Errorf("failed to open config: %w", err)
 //	}
@@ -160,7 +160,7 @@ func SafeOpen(filePath string) (*os.File, error) {
 //
 // Example usage:
 //
-//	file, err := pkg.SafeCreate("/app/data/output.json")
+//	file, err := safefile.SafeCreate("/app/data/output.json")
 //	if err != nil {
 //	    return fmt.Errorf("failed to create file: %w", err)
 //	}
@@ -191,7 +191,7 @@ func SafeCreate(filePath string) (*os.File, error) {
 //
 // Example usage:
 //
-//	if pkg.FileExists("/app/config/settings.yaml") {
+//	if safefile.FileExists("/app/config/settings.yaml") {
 //	    // load config
 //	}
 func FileExists(filePath string) bool {
@@ -210,7 +210,7 @@ func FileExists(filePath string) bool {
 //
 // Example usage:
 //
-//	if pkg.DirExists("/app/uploads") {
+//	if safefile.DirExists("/app/uploads") {
 //	    // directory ready
 //	}
 func DirExists(dirPath string) bool {

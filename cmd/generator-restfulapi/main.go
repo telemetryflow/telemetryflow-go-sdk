@@ -377,6 +377,13 @@ func runNew(cmd *cobra.Command, args []string) {
 	generateFromTemplate("infrastructure/middleware_cors.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "middleware", "cors.go"))
 	generateFromTemplate("infrastructure/middleware_ratelimit.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "middleware", "ratelimit.go"))
 	generateFromTemplate("infrastructure/health_handler.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "handler", "health.go"))
+	generateFromTemplate("infrastructure/home_handler.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "handler", "home.go"))
+
+	// Swagger documentation handlers
+	if enableSwagger {
+		generateFromTemplate("infrastructure/swagger_handler.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "handler", "swagger.go"))
+		generateFromTemplate("infrastructure/swagger_ui.html.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "http", "handler", "swagger_ui.html"))
+	}
 
 	// Infrastructure - Persistence
 	generateFromTemplate("infrastructure/database.go.tpl", data, filepath.Join(projectRoot, "internal", "infrastructure", "persistence", "database.go"))
@@ -385,6 +392,11 @@ func runNew(cmd *cobra.Command, args []string) {
 	generateFromTemplate("pkg/logger.go.tpl", data, filepath.Join(projectRoot, "pkg", "logger", "logger.go"))
 	generateFromTemplate("pkg/validator.go.tpl", data, filepath.Join(projectRoot, "pkg", "validator", "validator.go"))
 	generateFromTemplate("pkg/response.go.tpl", data, filepath.Join(projectRoot, "pkg", "response", "response.go"))
+
+	// Create safefile package directory
+	if err := os.MkdirAll(filepath.Join(projectRoot, "pkg", "safefile"), 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create safefile directory: %v\n", err)
+	}
 	generateFromTemplate("pkg/safefile.go.tpl", data, filepath.Join(projectRoot, "pkg", "safefile", "safefile.go"))
 
 	// Telemetry
@@ -398,6 +410,7 @@ func runNew(cmd *cobra.Command, args []string) {
 	// Docs
 	generateFromTemplate("docs/openapi.yaml.tpl", data, filepath.Join(projectRoot, "docs", "api", "openapi.yaml"))
 	generateFromTemplate("docs/swagger.json.tpl", data, filepath.Join(projectRoot, "docs", "api", "swagger.json"))
+	generateFromTemplate("docs/embed.go.tpl", data, filepath.Join(projectRoot, "docs", "api", "embed.go"))
 	generateFromTemplate("docs/erd.md.tpl", data, filepath.Join(projectRoot, "docs", "diagrams", "ERD.md"))
 	generateFromTemplate("docs/dfd.md.tpl", data, filepath.Join(projectRoot, "docs", "diagrams", "DFD.md"))
 	generateFromTemplate("docs/postman_collection.json.tpl", data, filepath.Join(projectRoot, "docs", "postman", "collection.json"))
