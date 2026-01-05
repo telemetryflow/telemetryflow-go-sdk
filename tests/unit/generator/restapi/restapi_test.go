@@ -651,7 +651,7 @@ func TestProjectFileGeneration(t *testing.T) {
 		}
 
 		for _, dir := range dirs {
-			err := os.MkdirAll(dir, 0755)
+			err := os.MkdirAll(dir, 0750)
 			require.NoError(t, err)
 		}
 

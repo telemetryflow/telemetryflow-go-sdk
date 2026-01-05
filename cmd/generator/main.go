@@ -135,7 +135,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create directory %s: %v\n", dir, err)
 			os.Exit(1)
 		}

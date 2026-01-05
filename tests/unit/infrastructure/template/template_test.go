@@ -242,7 +242,7 @@ func TestTemplateFileOperations(t *testing.T) {
 		outputPath := filepath.Join(tmpDir, "test", "output.go")
 
 		// Create directory structure
-		err := os.MkdirAll(filepath.Dir(outputPath), 0755)
+		err := os.MkdirAll(filepath.Dir(outputPath), 0750)
 		require.NoError(t, err)
 
 		// Create file
@@ -285,7 +285,7 @@ func TestTemplateFileOperations(t *testing.T) {
 		tmpDir := t.TempDir()
 		nestedPath := filepath.Join(tmpDir, "a", "b", "c", "file.go")
 
-		err := os.MkdirAll(filepath.Dir(nestedPath), 0755)
+		err := os.MkdirAll(filepath.Dir(nestedPath), 0750)
 		require.NoError(t, err)
 
 		err = os.WriteFile(nestedPath, []byte("content"), 0644)

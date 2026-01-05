@@ -347,7 +347,7 @@ func runNew(cmd *cobra.Command, args []string) {
 	}
 
 	for _, dir := range dirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0750); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create directory %s: %v\n", dir, err)
 			os.Exit(1)
 		}
@@ -404,7 +404,7 @@ func runNew(cmd *cobra.Command, args []string) {
 	generateFromTemplate("pkg/response.go.tpl", data, filepath.Join(projectRoot, "pkg", "response", "response.go"))
 
 	// Create safefile package directory
-	if err := os.MkdirAll(filepath.Join(projectRoot, "pkg", "safefile"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(projectRoot, "pkg", "safefile"), 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create safefile directory: %v\n", err)
 	}
 	generateFromTemplate("pkg/safefile.go.tpl", data, filepath.Join(projectRoot, "pkg", "safefile", "safefile.go"))
@@ -537,7 +537,7 @@ func generateFromTemplate(templateName string, data interface{}, outputPath stri
 	// Sanitize the output path to prevent path traversal (G304)
 	cleanPath := filepath.Clean(outputPath)
 
-	if err := os.MkdirAll(filepath.Dir(cleanPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(cleanPath), 0750); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create directory for %s: %v\n", cleanPath, err)
 		return
 	}

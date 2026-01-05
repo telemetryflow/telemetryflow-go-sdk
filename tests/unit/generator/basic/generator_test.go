@@ -136,7 +136,7 @@ func TestDirectoryCreation(t *testing.T) {
 
 		// Create directories
 		for _, dir := range dirs {
-			err := os.MkdirAll(dir, 0755)
+			err := os.MkdirAll(dir, 0750)
 			require.NoError(t, err)
 		}
 
@@ -160,11 +160,11 @@ func TestDirectoryCreation(t *testing.T) {
 		dir := filepath.Join(tmpDir, "telemetry")
 
 		// Create directory first time
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0750)
 		require.NoError(t, err)
 
 		// Should not error on second creation
-		err = os.MkdirAll(dir, 0755)
+		err = os.MkdirAll(dir, 0750)
 		require.NoError(t, err)
 	})
 }
