@@ -146,19 +146,20 @@ while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
     COVERAGE_FILE=$(mktemp)
 
     # Determine coverage packages (exclude tests/ and vendor/ directories)
-    # For SDK, we typically want to measure coverage of the main package
+    # This ensures we measure coverage of the actual source code, not test helpers
     COVERPKG=""
-    if [ -d "internal" ] || [ -d "pkg" ]; then
+    if [ -d "internal" ] || [ -d "pkg" ] || [ -d "cmd" ]; then
         # Build coverpkg list from actual source directories
         COVERPKG_DIRS=""
         [ -d "internal" ] && COVERPKG_DIRS="./internal/..."
         [ -d "pkg" ] && COVERPKG_DIRS="$COVERPKG_DIRS,./pkg/..."
+        [ -d "cmd" ] && COVERPKG_DIRS="$COVERPKG_DIRS,./cmd/..."
         COVERPKG_DIRS=$(echo "$COVERPKG_DIRS" | sed 's/^,//')
         if [ -n "$COVERPKG_DIRS" ]; then
             COVERPKG="-coverpkg=$COVERPKG_DIRS"
         fi
     fi
-    # If no internal/pkg, measure the root package (common for SDKs)
+    # If no internal/pkg/cmd, measure the root package (common for SDKs)
     if [ -z "$COVERPKG" ]; then
         # Get module name and use it for coverpkg
         MODULE_NAME=$(head -1 go.mod 2>/dev/null | awk '{print $2}' || echo "")
