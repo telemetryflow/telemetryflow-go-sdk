@@ -138,7 +138,8 @@ while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
     # ==========================================================================
     info "Running full test suite with coverage..."
 
-    # Coverage threshold (set to 80% - adjust based on project requirements)
+    # Coverage threshold (set to 80% - adjust based on project maturity)
+    # Increase this threshold as test coverage improves
     COVERAGE_THRESHOLD=80
 
     # Run all tests including tests/ directory
