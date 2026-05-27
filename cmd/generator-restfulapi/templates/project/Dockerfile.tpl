@@ -1,6 +1,6 @@
 #
 # TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder
 # -----------------------------------------------------------------------------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 

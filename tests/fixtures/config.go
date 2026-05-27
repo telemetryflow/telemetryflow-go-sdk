@@ -1,11 +1,20 @@
-// =============================================================================
-// Test Fixtures - Configuration
-// =============================================================================
+// Package fixtures Test Fixtures - Configuration.
 //
-// TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-// Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
 //
-// =============================================================================
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package fixtures
 
@@ -35,7 +44,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "minimal_config",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -51,7 +60,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "production_config",
 		ServiceName: "production-api",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "production",
 		Endpoint:    "api.telemetryflow.id:4317",
 		Protocol:    "grpc",
@@ -71,7 +80,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "http_protocol",
 		ServiceName: "http-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "staging",
 		Endpoint:    "https://api.telemetryflow.id:4318",
 		Protocol:    "http",
@@ -87,7 +96,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "metrics_only",
 		ServiceName: "metrics-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -103,7 +112,7 @@ var ValidConfigs = []ConfigFixture{
 	{
 		Name:        "traces_only",
 		ServiceName: "tracing-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -123,7 +132,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "empty_service_name",
 		ServiceName: "",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -133,7 +142,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "empty_endpoint",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "",
 		Protocol:    "grpc",
@@ -143,7 +152,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "invalid_protocol",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "websocket",
@@ -153,7 +162,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "negative_timeout",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -164,7 +173,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "zero_batch_size",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",
@@ -175,7 +184,7 @@ var InvalidConfigs = []ConfigFixture{
 	{
 		Name:        "no_signals_enabled",
 		ServiceName: "test-service",
-		Version:     "1.1.1",
+		Version:     "1.2.0",
 		Environment: "development",
 		Endpoint:    "localhost:4317",
 		Protocol:    "grpc",

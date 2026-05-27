@@ -4,7 +4,7 @@ Get up and running with TelemetryFlow in 5 minutes!
 
 ## Prerequisites
 
-- Go 1.24 or higher
+- Go 1.26 or higher
 - TelemetryFlow account with API credentials
 - Basic understanding of Go and observability concepts
 
@@ -30,7 +30,7 @@ TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id_here
 TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret_here
 TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317
 TELEMETRYFLOW_SERVICE_NAME=my-awesome-app
-TELEMETRYFLOW_SERVICE_VERSION=1.1.1
+TELEMETRYFLOW_SERVICE_VERSION=1.2.0
 ENV=production
 ```
 

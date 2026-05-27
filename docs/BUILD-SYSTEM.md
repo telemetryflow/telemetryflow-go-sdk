@@ -1,7 +1,7 @@
 # TelemetryFlow Go SDK Build System
 
-- **Version:** 1.1.1
-- **Go Version:** 1.24+
+- **Version:** 1.2.0
+- **Go Version:** 1.26+
 - **Last Updated:** December 2025
 
 ---
@@ -192,8 +192,8 @@ telemetryflow-go-sdk/
 
 ```makefile
 PRODUCT_NAME := TelemetryFlow Go SDK
-VERSION ?= 1.1.1
-GO_VERSION := 1.24
+VERSION ?= 1.2.0
+GO_VERSION := 1.26
 
 BUILD_DIR := ./build
 CMD_GEN := ./cmd/generator
@@ -336,7 +336,7 @@ help:
 
 ```dockerfile
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -416,14 +416,14 @@ go install github.com/telemetryflow/telemetryflow-go-sdk/cmd/generator-restfulap
 
 ### Build Fails: "go: version mismatch"
 
-Ensure you have Go 1.24+ installed:
+Ensure you have Go 1.26+ installed:
 
 ```bash
 go version
-# Expected: go version go1.24.x ...
+# Expected: go version go1.26.x ...
 
 # Or use GVM
-gvm use go1.24.11
+gvm use go1.26.0
 ```
 
 ### LDFLAGS Not Working
@@ -436,7 +436,7 @@ git rev-parse --short HEAD
 git rev-parse --abbrev-ref HEAD
 
 # Build with explicit values
-make build VERSION=1.1.1
+make build VERSION=1.2.0
 ```
 
 ### Cross-Compile Errors
@@ -450,4 +450,4 @@ brew install FiloSottile/musl-cross/musl-cross
 
 ---
 
-**Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.**
+**Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.**

@@ -7,10 +7,10 @@
 
   <h3>TelemetryFlow GO SDK</h3>
 
-[![Version](https://img.shields.io/badge/Version-1.1.2-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-orange.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
-[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org/)
+[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.43.0-blueviolet)](https://opentelemetry.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OTLP-100%25%20Compliant-success?logo=opentelemetry)](https://opentelemetry.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://hub.docker.com/r/telemetryflow/telemetryflow-sdk)
 
@@ -43,6 +43,7 @@ We take the security of TelemetryFlow Core seriously. If you believe you have fo
 **Please DO NOT report security vulnerabilities through public GitHub issues.**
 
 Instead, please report them via email to:
+
 - **Security Team**: security@telemetryflow.id
 - **Project Lead**: support@telemetryflow.id
 
@@ -78,6 +79,7 @@ Please include the following information in your report:
 ### For Users
 
 #### 1. Environment Variables
+
 ```bash
 # Never commit .env files
 echo ".env" >> .gitignore
@@ -87,6 +89,7 @@ pnpm run generate:secrets
 ```
 
 #### 2. Database Security
+
 ```bash
 # Use strong passwords
 POSTGRES_PASSWORD=<strong-random-password>
@@ -97,6 +100,7 @@ CLICKHOUSE_PASSWORD=<strong-random-password>
 ```
 
 #### 3. JWT Configuration
+
 ```bash
 # Use minimum 32 characters for secrets
 JWT_SECRET=<min-32-chars-random-string>
@@ -107,6 +111,7 @@ JWT_EXPIRES_IN=24h  # Adjust based on your needs
 ```
 
 #### 4. Production Deployment
+
 ```bash
 # Always use NODE_ENV=production
 NODE_ENV=production
@@ -123,6 +128,7 @@ LOG_LEVEL=warn
 #### 1. Code Security
 
 **Never commit:**
+
 - Passwords or API keys
 - Private keys or certificates
 - Database credentials
@@ -130,6 +136,7 @@ LOG_LEVEL=warn
 - Personal information
 
 **Always:**
+
 - Use environment variables for sensitive data
 - Validate all user inputs
 - Sanitize database queries
@@ -152,6 +159,7 @@ pnpm update
 #### 3. Code Review
 
 All code changes must:
+
 - Pass security review
 - Include tests for security-critical features
 - Follow OWASP security guidelines
@@ -198,6 +206,7 @@ No security vulnerabilities have been reported yet.
 ### Security Advisories
 
 Security advisories will be published at:
+
 - GitHub Security Advisories
 - Project documentation
 - Release notes
@@ -207,6 +216,7 @@ Security advisories will be published at:
 ### Standards
 
 TelemetryFlow Core follows:
+
 - **OWASP Top 10** security guidelines
 - **CWE/SANS Top 25** vulnerability prevention
 - **NIST Cybersecurity Framework** principles
@@ -214,22 +224,26 @@ TelemetryFlow Core follows:
 ### Certifications
 
 Currently pursuing:
+
 - SOC 2 Type II compliance
 - ISO 27001 certification
 
 ## Security Contacts
 
 ### Primary Contact
+
 - **Email**: security@telemetryflow.id
 - **Response Time**: 48 hours
 
 ### Alternative Contact
+
 - **Email**: support@telemetryflow.id
 - **GitHub**: [@telemetryflow](https://github.com/telemetryflow)
 
 ## Bug Bounty Program
 
 We currently do not have a formal bug bounty program, but we:
+
 - Acknowledge security researchers in release notes
 - Provide public recognition for valid reports
 - Consider monetary rewards for critical vulnerabilities (case-by-case basis)
@@ -239,10 +253,11 @@ We currently do not have a formal bug bounty program, but we:
 ### Notification Channels
 
 Stay informed about security updates:
+
 - **GitHub Releases**: Watch repository for releases
 - **Security Advisories**: Enable GitHub security alerts
 - **Changelog**: Check [CHANGELOG.md](./CHANGELOG.md)
-- **Release Notes**: Review [docs/RELEASE_NOTES_*.md](./docs/)
+- **Release Notes**: Review [docs/RELEASE*NOTES*\*.md](./docs/)
 
 ### Update Process
 
@@ -298,17 +313,20 @@ pnpm test
 ## Additional Resources
 
 ### Documentation
+
 - [README.md](./README.md) - Project overview
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Contribution guidelines
 - [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) - Community standards
 
 ### Security Tools
+
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [npm audit](https://docs.npmjs.com/cli/v8/commands/npm-audit)
 - [Snyk](https://snyk.io/) - Vulnerability scanning
 - [SonarQube](https://www.sonarqube.org/) - Code quality & security
 
 ### Security Training
+
 - [OWASP WebGoat](https://owasp.org/www-project-webgoat/)
 - [PortSwigger Web Security Academy](https://portswigger.net/web-security)
 - [HackerOne Resources](https://www.hackerone.com/resources)
@@ -317,12 +335,12 @@ pnpm test
 
 We would like to thank the following security researchers for their contributions:
 
-*No security researchers have been acknowledged yet.*
+_No security researchers have been acknowledged yet._
 
 ---
 
-- **Last Updated**: December 23, 2025
-- **Version**: 1.0.1
+- **Last Updated**: May 27, 2026
+- **Version**: 1.2.0
 - **Project**: TelemetryFlow SDK
 
-**Built with ❤️ by DevOpsCorner Indonesia**
+**Built with ❤️ by Telemetri Data Indonesia**

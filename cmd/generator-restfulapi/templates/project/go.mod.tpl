@@ -1,8 +1,8 @@
 module {{.ModulePath}}
 
-go 1.24.0
+go 1.26.0
 
-toolchain go1.24.11
+toolchain go1.26.3
 
 require (
 	github.com/go-playground/validator/v10 v10.30.0
@@ -20,7 +20,7 @@ require (
 {{- end}}
 	gorm.io/gorm v1.25.12
 {{- if .EnableTelemetry}}
-	github.com/telemetryflow/telemetryflow-go-sdk v1.1.2
+	github.com/telemetryflow/telemetryflow-go-sdk v1.2.0
 {{- end}}
 {{- if .EnableAuth}}
 	github.com/golang-jwt/jwt/v5 v5.3.0

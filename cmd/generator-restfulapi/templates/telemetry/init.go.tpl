@@ -1,6 +1,6 @@
 // Package telemetry provides TelemetryFlow SDK integration for {{.ProjectName}}.
 //
-// TelemetryFlow Go SDK v1.1.2 - Compatible with TFO-Collector v1.1.2 (OCB-native)
+// TelemetryFlow Go SDK v1.2.0 - Compatible with TFO-Collector v1.2.1 (OCB-native)
 package telemetry
 
 import (
@@ -61,13 +61,13 @@ func Init() error {
 		return err
 	}
 
-	log.Println("TelemetryFlow SDK v1.1.2 initialized successfully (TFO v2 API enabled)")
+	log.Println("TelemetryFlow SDK v1.2.0 initialized successfully (TFO v2 API enabled)")
 	return nil
 }
 
 // InitWithV2Only initializes the TelemetryFlow SDK in v2-only mode.
 // This mode uses only TFO Platform v2 endpoints for maximum compatibility
-// with TFO-Collector v1.1.2 (OCB-native).
+// with TFO-Collector v1.2.1 (OCB-native).
 func InitWithV2Only() error {
 	var err error
 
@@ -97,7 +97,7 @@ func InitWithV2Only() error {
 		return err
 	}
 
-	log.Println("TelemetryFlow SDK v1.1.2 initialized in v2-only mode")
+	log.Println("TelemetryFlow SDK v1.2.0 initialized in v2-only mode")
 	return nil
 }
 

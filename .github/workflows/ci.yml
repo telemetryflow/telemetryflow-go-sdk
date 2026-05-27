@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
 #
 # This workflow runs tests and linting for the TelemetryFlow Go SDK:
 # - Unit tests
@@ -57,7 +57,7 @@ on:
         default: false
 
 env:
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.26'
   PRODUCT_NAME: TelemetryFlow Go SDK
 
 permissions:
@@ -75,10 +75,10 @@ jobs:
     if: ${{ !inputs.skip_lint }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -113,10 +113,10 @@ jobs:
     if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -128,7 +128,7 @@ jobs:
         run: make test-unit-ci
 
       - name: Upload unit test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-unit
           path: coverage-unit.out
@@ -144,10 +144,10 @@ jobs:
     if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -159,7 +159,7 @@ jobs:
         run: make test-integration-ci
 
       - name: Upload integration test coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-integration
           path: coverage-integration.out
@@ -175,10 +175,10 @@ jobs:
     if: ${{ inputs.run_e2e == true || github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -218,10 +218,10 @@ jobs:
             runner: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -263,10 +263,10 @@ jobs:
     if: always() && (needs.lint.result == 'success' || needs.lint.result == 'skipped')
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -298,22 +298,22 @@ jobs:
     if: always() && needs.test-unit.result == 'success'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Download unit coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-unit
           path: coverage/
 
       - name: Download integration coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-integration
           path: coverage/
@@ -336,7 +336,7 @@ jobs:
           mv coverage.html coverage/coverage.html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage/

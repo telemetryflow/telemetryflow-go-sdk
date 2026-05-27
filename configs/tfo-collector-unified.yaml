@@ -82,8 +82,19 @@ receivers:
       grpc:
         endpoint: "0.0.0.0:4317"
         max_recv_msg_size_mib: 4
+        max_concurrent_streams: 100
+        read_buffer_size: 524288
+        write_buffer_size: 524288
+        keepalive:
+          server_parameters:
+            max_connection_idle: 15s
+            max_connection_age: 30s
+            max_connection_age_grace: 5s
+            time: 10s
+            timeout: 5s
       http:
         endpoint: "0.0.0.0:4318"
+        transport: tcp
         cors:
           allowed_origins:
             - "*"
@@ -129,16 +140,50 @@ processors:
 
   # Resource detection for automatic enrichment
   resourcedetection:
-    detectors: [env, system, docker]
+    detectors: [env, system]
     timeout: 5s
     override: false
+
+  # TFO-Agent: Normalize cAdvisor Prometheus-style metric names (container_* -> container.cadvisor.*)
+  transform/cadvisor:
+    error_mode: ignore
+    metric_statements:
+      - context: metric
+        statements:
+          - replace_pattern(name, "^container_cpu_usage_seconds_total$", "container.cadvisor.cpu.usage_seconds_total")
+          - replace_pattern(name, "^container_memory_usage_bytes$", "container.cadvisor.memory.usage_bytes")
+          - replace_pattern(name, "^container_memory_working_set_bytes$", "container.cadvisor.memory.working_set_bytes")
+          - replace_pattern(name, "^container_memory_rss$", "container.cadvisor.memory.rss_bytes")
+          - replace_pattern(name, "^container_memory_cache$", "container.cadvisor.memory.cache_bytes")
+          - replace_pattern(name, "^container_network_receive_bytes_total$", "container.cadvisor.network.receive_bytes_total")
+          - replace_pattern(name, "^container_network_transmit_bytes_total$", "container.cadvisor.network.transmit_bytes_total")
+          - replace_pattern(name, "^container_fs_usage_bytes$", "container.cadvisor.fs.usage_bytes")
+          - replace_pattern(name, "^machine_cpu_cores$", "machine.cpu.cores")
+          - replace_pattern(name, "^machine_memory_bytes$", "machine.memory.bytes")
+
+  # TFO-Agent: Normalize Cilium Hubble Prometheus-style metric names (hubble_* -> hubble.*)
+  transform/hubble:
+    error_mode: ignore
+    metric_statements:
+      - context: metric
+        statements:
+          - replace_pattern(name, "^hubble_flows_processed_total$", "hubble.flows.processed_total")
+          - replace_pattern(name, "^hubble_drop_total$", "hubble.drop_total")
+          - replace_pattern(name, "^hubble_http_requests_total$", "hubble.http.requests_total")
+
+  # TFO-Agent: Tag all agent-sourced telemetry for platform-side identification
+  attributes/agent:
+    actions:
+      - key: tfo.source
+        value: "tfo-agent"
+        action: insert
 
 # =============================================================================
 # CONNECTORS - Pipeline bridging for Exemplars and derived metrics
 # =============================================================================
 connectors:
   # Span metrics connector - derives metrics from traces with EXEMPLARS support
-  spanmetrics:
+  span_metrics:
     histogram:
       explicit:
         buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
@@ -155,20 +200,23 @@ connectors:
     metrics_flush_interval: 15s
 
   # Service graph connector - builds service dependency graphs from traces
-  servicegraph:
+  service_graph:
     latency_histogram_buckets: [1ms, 5ms, 10ms, 25ms, 50ms, 100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
     dimensions:
       - http.method
       - http.status_code
     store:
-      ttl: 2s
-      max_items: 1000
-    cache_loop: 1s
-    store_expiration_loop: 2s
+      ttl: 10s
+      max_items: 5000
+    cache_loop: 2s
+    store_expiration_loop: 5s
     virtual_node_peer_attributes:
       - db.system
       - messaging.system
       - rpc.service
+      - net.peer.name
+      - server.address
+    metrics_flush_interval: 15s
 
 # =============================================================================
 # EXPORTERS - TFO Platform Export
@@ -213,7 +261,7 @@ exporters:
       queue_size: 1000
     compression: gzip
     headers:
-      User-Agent: "TFO-Collector-Unified/1.1.2"
+      User-Agent: "TFO-Collector-Unified/1.2.1"
 
   # TFO Exporter for Traces (dedicated instance with trace-specific settings)
   tfo/traces:
@@ -282,31 +330,43 @@ service:
     # Traces pipeline - TFO v2 authenticated traces
     traces:
       receivers: [tfootlp]
-      processors: [memory_limiter, resourcedetection, resource, batch]
-      exporters: [debug, tfo/traces, spanmetrics, servicegraph]
+      processors: [memory_limiter, resourcedetection, resource, attributes/agent, batch]
+      exporters: [debug, tfo/traces, span_metrics, service_graph]
 
-    # Metrics pipeline - TFO v2 authenticated metrics
+    # Metrics pipeline - TFO v2 authenticated metrics with TFO-Agent normalization
     metrics:
       receivers: [tfootlp]
-      processors: [memory_limiter, resourcedetection, resource, batch]
+      processors:
+        - memory_limiter
+        - resourcedetection
+        - resource
+        - transform/cadvisor
+        - transform/hubble
+        - attributes/agent
+        - batch
       exporters: [debug, tfo/metrics, prometheus]
 
     # Metrics from traces pipeline - derived metrics with EXEMPLARS
-    metrics/spanmetrics:
-      receivers: [spanmetrics]
-      processors: [memory_limiter, batch]
+    metrics/span_metrics:
+      receivers: [span_metrics]
+      processors: [memory_limiter, resource, batch]
       exporters: [tfo/metrics, prometheus]
 
     # Metrics from service graph - service dependency metrics
-    metrics/servicegraph:
-      receivers: [servicegraph]
-      processors: [memory_limiter, batch]
+    metrics/service_graph:
+      receivers: [service_graph]
+      processors: [memory_limiter, resource, batch]
       exporters: [tfo/metrics, prometheus]
 
     # Logs pipeline - TFO v2 authenticated logs
     logs:
       receivers: [tfootlp]
-      processors: [memory_limiter, resourcedetection, resource, batch]
+      processors:
+        - memory_limiter
+        - resourcedetection
+        - resource
+        - attributes/agent
+        - batch
       exporters: [debug, tfo/logs]
 
   # Internal telemetry configuration

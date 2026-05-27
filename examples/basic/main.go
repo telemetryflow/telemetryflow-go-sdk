@@ -1,17 +1,21 @@
-// Package main demonstrates TelemetryFlow Go SDK v1.1.2 basic usage.
+// Package main demonstrates basic TelemetryFlow Go SDK usage.
 //
-// This example shows:
-// - Simple initialization from environment variables
-// - Builder pattern with TFO v2 API support
-// - Collector identity configuration (aligned with tfoidentityextension)
-// - TFO v2-only mode for TFO-Collector v1.1.2 compatibility
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
 //
-// Run with:
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//	export TELEMETRYFLOW_API_KEY_ID=tfk_your_key
-//	export TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret
-//	export TELEMETRYFLOW_SERVICE_NAME=my-service
-//	go run main.go
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -29,7 +33,7 @@ func main() {
 	// Example 2: Builder pattern with TFO v2 API configuration
 	builderExample()
 
-	// Example 3: TFO v2-only mode (aligned with TFO-Collector v1.1.2)
+	// Example 3: TFO v2-only mode (aligned with TFO-Collector v1.2.1)
 	v2OnlyExample()
 
 	// Example 4: Complete example with all signal types
@@ -134,12 +138,12 @@ func builderExample() {
 func v2OnlyExample() {
 	log.Println("=== TFO v2-Only Mode Example ===")
 
-	// Build client in v2-only mode for TFO-Collector v1.1.2 (OCB-native)
+	// Build client in v2-only mode for TFO-Collector v1.2.1 (OCB-native)
 	// This mode uses only v2 endpoints: /v2/traces, /v2/metrics, /v2/logs
 	client := telemetryflow.NewBuilder().
 		WithAPIKey("tfk_your_key_id", "tfs_your_key_secret").
 		WithEndpoint("api.telemetryflow.id:4317").
-		WithService("v2-only-service", "1.1.2").
+		WithService("v2-only-service", "1.2.0").
 		WithServiceNamespace("telemetryflow").
 		WithEnvironment("production").
 		WithGRPC().
@@ -150,7 +154,7 @@ func v2OnlyExample() {
 		WithCollectorDescription("TelemetryFlow Go SDK - TFO v2-only mode").
 		WithDatacenter("default").
 		WithCollectorTag("mode", "v2-only").
-		WithCollectorTag("sdk_version", "1.1.2").
+		WithCollectorTag("sdk_version", "1.2.0").
 		WithEnrichResources(true).
 		WithExemplars(true).
 		MustBuild()
@@ -167,8 +171,8 @@ func v2OnlyExample() {
 
 	// Log that we're in v2-only mode
 	if err := client.LogInfo(ctx, "SDK initialized in v2-only mode", map[string]interface{}{
-		"sdk_version":           "1.1.2",
-		"tfo_collector_version": "1.1.2",
+		"sdk_version":           "1.2.0",
+		"tfo_collector_version": "1.2.1",
 		"mode":                  "v2-only",
 	}); err != nil {
 		log.Printf("Failed to log info: %v", err)
@@ -190,7 +194,7 @@ func v2OnlyExample() {
 func completeExample() {
 	log.Println("=== Complete Example (All Signals with TFO v2) ===")
 
-	// Create client with full TFO v1.1.2 configuration
+	// Create client with full TFO v1.2.0 configuration
 	client := telemetryflow.NewBuilder().
 		WithAPIKey("tfk_your_key_id", "tfs_your_key_secret").
 		WithEndpoint("api.telemetryflow.id:4317").
@@ -250,7 +254,7 @@ func completeExample() {
 	if err := client.LogInfo(ctx, "Application started successfully", map[string]interface{}{
 		"version":     "2.0.0",
 		"port":        8080,
-		"sdk_version": "1.1.2",
+		"sdk_version": "1.2.0",
 	}); err != nil {
 		log.Printf("Failed to log info: %v", err)
 	}

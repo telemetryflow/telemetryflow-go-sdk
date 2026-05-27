@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder
 # -----------------------------------------------------------------------------
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 # Build arguments
-ARG VERSION=1.1.1
+ARG VERSION=1.2.0
 ARG GIT_COMMIT=unknown
 ARG GIT_BRANCH=unknown
 ARG BUILD_TIME=unknown
@@ -50,18 +50,18 @@ COPY . .
 # Build the generators with version information
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags "-s -w \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}'" \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}'" \
     -o /telemetryflow-gen ./cmd/generator
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags "-s -w \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH}' \
-        -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}'" \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.Version=${VERSION}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitCommit=${GIT_COMMIT}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.GitBranch=${GIT_BRANCH}' \
+    -X 'github.com/telemetryflow/telemetryflow-go-sdk/internal/version.BuildTime=${BUILD_TIME}'" \
     -o /telemetryflow-restapi ./cmd/generator-restfulapi
 
 # Verify binaries
@@ -76,20 +76,20 @@ FROM alpine:3.21
 # TelemetryFlow Metadata Labels (OCI Image Spec)
 # =============================================================================
 LABEL org.opencontainers.image.title="TelemetryFlow Go SDK" \
-      org.opencontainers.image.description="Go SDK and code generators for TelemetryFlow integration - Community Enterprise Observability Platform (CEOP)" \
-      org.opencontainers.image.version="1.1.1" \
-      org.opencontainers.image.vendor="TelemetryFlow" \
-      org.opencontainers.image.authors="DevOpsCorner Indonesia <support@devopscorner.id>" \
-      org.opencontainers.image.url="https://telemetryflow.id" \
-      org.opencontainers.image.documentation="https://docs.telemetryflow.id" \
-      org.opencontainers.image.source="https://github.com/telemetryflow/telemetryflow-go-sdk" \
-      org.opencontainers.image.licenses="Apache-2.0" \
-      org.opencontainers.image.base.name="alpine:3.21" \
-      # TelemetryFlow specific labels
-      io.telemetryflow.product="TelemetryFlow Go SDK" \
-      io.telemetryflow.component="telemetryflow-sdk" \
-      io.telemetryflow.platform="CEOP" \
-      io.telemetryflow.maintainer="DevOpsCorner Indonesia"
+    org.opencontainers.image.description="Go SDK and code generators for TelemetryFlow integration - Community Enterprise Observability Platform (CEOP)" \
+    org.opencontainers.image.version="1.2.0" \
+    org.opencontainers.image.vendor="TelemetryFlow" \
+    org.opencontainers.image.authors="Telemetri Data Indonesia <support@devopscorner.id>" \
+    org.opencontainers.image.url="https://telemetryflow.id" \
+    org.opencontainers.image.documentation="https://docs.telemetryflow.id" \
+    org.opencontainers.image.source="https://github.com/telemetryflow/telemetryflow-go-sdk" \
+    org.opencontainers.image.licenses="Apache-2.0" \
+    org.opencontainers.image.base.name="alpine:3.21" \
+    # TelemetryFlow specific labels
+    io.telemetryflow.product="TelemetryFlow Go SDK" \
+    io.telemetryflow.component="telemetryflow-sdk" \
+    io.telemetryflow.platform="CEOP" \
+    io.telemetryflow.maintainer="Telemetri Data Indonesia"
 
 # Install runtime dependencies
 RUN apk add --no-cache \
@@ -126,19 +126,15 @@ CMD ["--help"]
 # =============================================================================
 # Build with:
 #   docker build \
-#     --build-arg VERSION=1.1.1 \
-#     --build-arg GIT_COMMIT=$(git rev-parse --short HEAD) \
-#     --build-arg GIT_BRANCH=$(git rev-parse --abbrev-ref HEAD) \
-#     --build-arg BUILD_TIME=$(date -u '+%Y-%m-%dT%H:%M:%SZ') \
-#     -t telemetryflow/telemetryflow-sdk:1.1.1 .
+#     --build-arg VERSION=1.2.0 \
+#     -t telemetryflow/telemetryflow-sdk:1.2.0 .
 #
 # Run with:
 #   # SDK Generator
-#   docker run --rm -v $(pwd):/workspace telemetryflow/telemetryflow-sdk:1.1.1 \
-#     init --project myapp --service my-service
+#   docker run --rm -v $(pwd):/workspace telemetryflow/telemetryflow-sdk:1.2.0 \
 #
 #   # RESTful API Generator
 #   docker run --rm -v $(pwd):/workspace --entrypoint /usr/local/bin/telemetryflow-restapi \
-#     telemetryflow/telemetryflow-sdk:1.1.1 \
+#     telemetryflow/telemetryflow-sdk:1.2.0 \
 #     new --name my-api --module github.com/example/my-api
 # =============================================================================

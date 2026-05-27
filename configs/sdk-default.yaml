@@ -1,8 +1,8 @@
 # =============================================================================
 # TelemetryFlow Go SDK - Default Configuration
 # =============================================================================
-# This is the default SDK configuration for TelemetryFlow Go SDK v1.1.2
-# Compatible with TFO-Collector v1.1.2 (OCB-native)
+# This is the default SDK configuration for TelemetryFlow Go SDK v1.2.0
+# Compatible with TFO-Collector v1.2.1 (OCB-native) & TFO-Agent v1.2.0
 #
 # Usage in Go:
 #   client, err := telemetryflow.NewBuilder().
@@ -13,8 +13,8 @@
 # -----------------------------------------------------------------------------
 # SDK Version Info
 # -----------------------------------------------------------------------------
-version: "1.1.2"
-tfo_collector_version: "1.1.2"
+version: "1.2.0"
+tfo_collector_version: "1.2.1"
 otel_version: "0.142.0"
 
 # -----------------------------------------------------------------------------
@@ -99,7 +99,7 @@ collector:
 
   # Custom tags for collector identification
   tags:
-    sdk_version: "1.1.2"
+    sdk_version: "1.2.0"
     sdk_language: "go"
     # environment: "production"
     # team: "platform"

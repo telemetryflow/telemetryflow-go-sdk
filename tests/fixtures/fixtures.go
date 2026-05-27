@@ -1,14 +1,21 @@
-// Package fixtures provides test data and utilities for testing the
-// TelemetryFlow Go SDK. It includes sample data for:
+// Package fixtures provides test data and utilities for testing the TelemetryFlow Go SDK. It includes sample data for: - Credentials: Valid and invalid API key scenarios - Configuration: Various SDK configuration options - Telemetry: Sample metrics, logs, and traces - Templates: Code generator template data - Responses: Mock HTTP/gRPC responses.
 //
-//   - Credentials: Valid and invalid API key scenarios
-//   - Configuration: Various SDK configuration options
-//   - Telemetry: Sample metrics, logs, and traces
-//   - Templates: Code generator template data
-//   - Responses: Mock HTTP/gRPC responses
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
 //
-// TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-// Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package fixtures
 
 import (

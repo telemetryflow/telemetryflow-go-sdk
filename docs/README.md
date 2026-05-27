@@ -1,7 +1,7 @@
 # TelemetryFlow Go SDK Documentation
 
-- **Version:** 1.1.1
-- **OTEL Version:** 1.39.0
+- **Version:** 1.2.0
+- **OTEL Version:** 1.43.0
 - **Last Updated:** December 2025
 - **Status:** Production Ready
 
@@ -56,7 +56,7 @@ TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id_here
 TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret_here
 TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317
 TELEMETRYFLOW_SERVICE_NAME=my-go-service
-TELEMETRYFLOW_SERVICE_VERSION=1.1.1
+TELEMETRYFLOW_SERVICE_VERSION=1.2.0
 TELEMETRYFLOW_SERVICE_NAMESPACE=telemetryflow
 ```
 
@@ -258,8 +258,8 @@ See [BUILD-SYSTEM.md](BUILD-SYSTEM.md) for build system documentation.
 - **Website**: [https://telemetryflow.id](https://telemetryflow.id)
 - **Documentation**: [https://docs.telemetryflow.id](https://docs.telemetryflow.id)
 - **OpenTelemetry**: [https://opentelemetry.io](https://opentelemetry.io)
-- **Developer**: [DevOpsCorner Indonesia](https://devopscorner.id)
+- **Developer**: [Telemetri Data Indonesia](https://devopscorner.id)
 
 ---
 
-**Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.**
+**Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.**

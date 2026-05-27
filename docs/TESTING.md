@@ -2,7 +2,7 @@
 
 Testing guide for the TelemetryFlow Go SDK.
 
-- **Version:** 1.1.1
+- **Version:** 1.2.0
 - **Last Updated:** December 2025
 
 ---
@@ -399,7 +399,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: '1.26'
       - name: Run tests
         run: make test
       - name: Run coverage
@@ -466,4 +466,4 @@ go test -coverpkg=./... -coverprofile=coverage.out ./...
 
 ---
 
-**Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.**
+**Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.**

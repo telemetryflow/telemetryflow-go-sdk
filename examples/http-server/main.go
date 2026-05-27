@@ -1,19 +1,21 @@
-// Package main demonstrates TelemetryFlow SDK v1.1.2 integration with an HTTP server.
+// Package main demonstrates TelemetryFlow SDK integration with an HTTP server.
 //
-// This example shows:
-// - HTTP auto-instrumentation middleware for automatic request tracing
-// - Request duration histograms
-// - Error counting and logging
-// - TFO v2 API with collector identity
-// - Graceful shutdown with telemetry flush
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
 //
-// Compatible with TFO-Collector v1.1.2 (OCB-native)
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// Run with:
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
-//	export TELEMETRYFLOW_API_KEY_ID=tfk_your_key
-//	export TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret
-//	go run main.go
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -39,7 +41,7 @@ func main() {
 	client, err = telemetryflow.NewBuilder().
 		WithAPIKeyFromEnv().
 		WithEndpointFromEnv().
-		WithService("http-server-example", "1.1.2").
+		WithService("http-server-example", "1.2.0").
 		WithServiceNamespace("telemetryflow").
 		WithEnvironmentFromEnv().
 		WithGRPC().
@@ -54,7 +56,7 @@ func main() {
 		WithExemplars(true).
 		// Custom attributes
 		WithCustomAttribute("example", "http-server").
-		WithCustomAttribute("sdk_version", "1.1.2").
+		WithCustomAttribute("sdk_version", "1.2.0").
 		Build()
 
 	if err != nil {
@@ -75,7 +77,7 @@ func main() {
 
 	// Create auto-instrumentation middleware with TelemetryFlow
 	httpMiddleware := instrumentation.NewHTTPMiddleware(
-		instrumentation.WithServiceInfo("http-server-example", "1.1.2"),
+		instrumentation.WithServiceInfo("http-server-example", "1.2.0"),
 		instrumentation.WithMetrics(true),
 		instrumentation.WithTracing(true),
 	)

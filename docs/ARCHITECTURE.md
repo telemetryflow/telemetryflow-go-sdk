@@ -2,7 +2,7 @@
 
 Domain-Driven Design (DDD) architecture guide for the TelemetryFlow Go SDK.
 
-- **Version:** 1.1.1
+- **Version:** 1.2.0
 - **Last Updated:** December 2025
 
 ---

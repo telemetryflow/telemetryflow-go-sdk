@@ -1,7 +1,21 @@
 // Package banner_test provides unit tests for the banner package.
 //
-// TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-// Copyright (c) 2024-2026 TelemetryFlow. All rights reserved.
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package banner_test
 
 import (
@@ -18,11 +32,11 @@ func TestDefaultConfig(t *testing.T) {
 		cfg := banner.DefaultConfig()
 
 		assert.Equal(t, "TelemetryFlow Go SDK", cfg.ProductName)
-		assert.Equal(t, "1.1.1", cfg.Version)
+		assert.Equal(t, "1.2.0", cfg.Version)
 		assert.Equal(t, "Community Enterprise Observability Platform (CEOP)", cfg.Motto)
 		assert.Equal(t, "TelemetryFlow", cfg.Vendor)
 		assert.Equal(t, "https://telemetryflow.id", cfg.VendorURL)
-		assert.Equal(t, "DevOpsCorner Indonesia", cfg.Developer)
+		assert.Equal(t, "Telemetri Data Indonesia", cfg.Developer)
 		assert.Equal(t, "Apache-2.0", cfg.License)
 		assert.Equal(t, "https://docs.telemetryflow.id", cfg.SupportURL)
 	})
@@ -30,7 +44,7 @@ func TestDefaultConfig(t *testing.T) {
 	t.Run("should have copyright info", func(t *testing.T) {
 		cfg := banner.DefaultConfig()
 
-		assert.Contains(t, cfg.Copyright, "DevOpsCorner Indonesia")
+		assert.Contains(t, cfg.Copyright, "Telemetri Data Indonesia")
 		assert.Contains(t, cfg.Copyright, "2024-2026")
 	})
 }
@@ -47,7 +61,7 @@ func TestGeneratorConfig(t *testing.T) {
 		cfg := banner.GeneratorConfig()
 
 		assert.Equal(t, "TelemetryFlow", cfg.Vendor)
-		assert.Equal(t, "DevOpsCorner Indonesia", cfg.Developer)
+		assert.Equal(t, "Telemetri Data Indonesia", cfg.Developer)
 		assert.Equal(t, "Apache-2.0", cfg.License)
 	})
 }
@@ -64,7 +78,7 @@ func TestRESTfulAPIGeneratorConfig(t *testing.T) {
 		cfg := banner.RESTfulAPIGeneratorConfig()
 
 		assert.Equal(t, "TelemetryFlow", cfg.Vendor)
-		assert.Equal(t, "DevOpsCorner Indonesia", cfg.Developer)
+		assert.Equal(t, "Telemetri Data Indonesia", cfg.Developer)
 		assert.Equal(t, "Apache-2.0", cfg.License)
 	})
 }

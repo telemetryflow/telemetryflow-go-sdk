@@ -7,10 +7,10 @@
 
   <h3>TelemetryFlow GO SDK</h3>
 
-[![Version](https://img.shields.io/badge/Version-1.1.2-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-orange.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
-[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org/)
+[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.43.0-blueviolet)](https://opentelemetry.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OTLP-100%25%20Compliant-success?logo=opentelemetry)](https://opentelemetry.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://hub.docker.com/r/telemetryflow/telemetryflow-sdk)
 
@@ -59,7 +59,7 @@ TELEMETRYFLOW_API_KEY_ID=tfk_your_key_id_here
 TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret_here
 TELEMETRYFLOW_ENDPOINT=api.telemetryflow.id:4317
 TELEMETRYFLOW_SERVICE_NAME=my-go-service
-TELEMETRYFLOW_SERVICE_VERSION=1.1.1
+TELEMETRYFLOW_SERVICE_VERSION=1.2.0
 TELEMETRYFLOW_SERVICE_NAMESPACE=telemetryflow
 TELEMETRYFLOW_COLLECTOR_ID=my-collector-id
 ENV=production
@@ -137,12 +137,14 @@ pkg/telemetryflow/
 ### Domain Layer
 
 Core business entities and value objects:
+
 - `Credentials`: Immutable API key pair with validation
 - `TelemetryConfig`: Aggregate root containing all configuration
 
 ### Application Layer
 
 CQRS implementation:
+
 - **Commands**: `RecordMetricCommand`, `EmitLogCommand`, `StartSpanCommand`, etc.
 - **Queries**: `GetMetricQuery`, `GetLogsQuery`, `GetTraceQuery`, etc.
 - **Command/Query Buses**: Route requests to appropriate handlers
@@ -150,6 +152,7 @@ CQRS implementation:
 ### Infrastructure Layer
 
 Technical implementations:
+
 - `OTLPExporterFactory`: Creates OTLP exporters (gRPC/HTTP)
 - `TelemetryCommandHandler`: Handles telemetry commands
 - OpenTelemetry SDK integration
@@ -368,7 +371,7 @@ config.WithMetricsOnly()
 config.WithTracesOnly()
 ```
 
-### Exemplars Support (v1.1.1+)
+### Exemplars Support (v1.1.0+)
 
 Exemplars enable metrics-to-traces correlation for powerful debugging:
 
@@ -380,7 +383,7 @@ client := telemetryflow.NewBuilder().
     MustBuild()
 ```
 
-### Service Namespace (v1.1.1+)
+### Service Namespace (v1.1.0+)
 
 ```go
 // Set service namespace for multi-tenant environments
@@ -390,7 +393,7 @@ client := telemetryflow.NewBuilder().
     MustBuild()
 ```
 
-### Collector ID (v1.1.1+)
+### Collector ID (v1.1.0+)
 
 ```go
 // Set collector ID for TelemetryFlow backend authentication
@@ -565,4 +568,4 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-Built with ❤️ by the **DevOpsCorner Indonesia**
+Built with ❤️ by the **Telemetri Data Indonesia**

@@ -1,23 +1,21 @@
-// Package main demonstrates TelemetryFlow SDK v1.1.2 integration with a gRPC server.
+// Package main demonstrates TelemetryFlow SDK integration with a gRPC server.
 //
-// This example shows:
-// - gRPC unary and streaming interceptors for tracing
-// - RPC metrics (latency, errors, call counts)
-// - Service-level health monitoring
-// - TFO v2 API with collector identity
-// - Graceful shutdown
+// TelemetryFlow Go SDK - Community Enterprise Observability Platform
+// Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+// Open Source Software built by Telemetri Data Indonesia.
 //
-// Compatible with TFO-Collector v1.1.2 (OCB-native)
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// Note: This example simulates gRPC patterns without the full gRPC dependency
-// to keep the example self-contained. In a real application, you would use
-// google.golang.org/grpc with proper interceptors.
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
-// Run with:
-//
-//	export TELEMETRYFLOW_API_KEY_ID=tfk_your_key
-//	export TELEMETRYFLOW_API_KEY_SECRET=tfs_your_secret
-//	go run main.go
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -71,7 +69,7 @@ func main() {
 	client, err = telemetryflow.NewBuilder().
 		WithAPIKeyFromEnv().
 		WithEndpointFromEnv().
-		WithService("grpc-server-example", "1.1.2").
+		WithService("grpc-server-example", "1.2.0").
 		WithServiceNamespace("telemetryflow").
 		WithEnvironmentFromEnv().
 		WithGRPC().
@@ -87,7 +85,7 @@ func main() {
 		// Custom attributes
 		WithCustomAttribute("example", "grpc-server").
 		WithCustomAttribute("grpc.port", "50051").
-		WithCustomAttribute("sdk_version", "1.1.2").
+		WithCustomAttribute("sdk_version", "1.2.0").
 		Build()
 
 	if err != nil {

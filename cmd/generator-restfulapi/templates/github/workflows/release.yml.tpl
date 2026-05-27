@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # {{.ProjectName}} - TelemetryFlow Microservices Platform
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
 #
 # This workflow builds and releases {{.ProjectName}} for:
 # - Linux: Binary (amd64, arm64)
@@ -39,7 +39,7 @@ env:
   GO_VERSION: '1.24'
   BINARY_NAME: {{.ProjectName | lower}}
   PRODUCT_NAME: {{.ProjectName}}
-  VENDOR: DevOpsCorner Indonesia
+  VENDOR: Telemetri Data Indonesia
   MAINTAINER: support@telemetryflow.id
   DESCRIPTION: {{.ProjectName}} microservice with OpenTelemetry instrumentation
   LICENSE: Apache-2.0

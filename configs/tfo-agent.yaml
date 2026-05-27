@@ -1,0 +1,133 @@
+# =============================================================================
+# TelemetryFlow Agent Configuration — SDK Docker Compose
+# =============================================================================
+# Community Enterprise Observability Platform (CEOP)
+# Copyright (c) 2024-2026 TelemetryFlow. All rights reserved.
+#
+# Lightweight agent config for SDK development environment.
+# Collects system metrics and forwards to TFO-Collector.
+#
+# For the full reference configuration with all options, see:
+#   telemetryflow-agent/configs/tfo-agent.yaml
+#
+# =============================================================================
+# Environment Variables
+# =============================================================================
+#   TELEMETRYFLOW_API_KEY_ID      - API Key ID for authentication (format: tfk_xxx)
+#   TELEMETRYFLOW_API_KEY_SECRET  - API Key Secret for authentication (format: tfs_xxx)
+#   TELEMETRYFLOW_ENDPOINT        - TFO backend base URL
+#   TELEMETRYFLOW_AGENT_ID        - Unique agent ID (optional, auto-generated if unset)
+#   TELEMETRYFLOW_AGENT_NAME      - Human-readable agent name (optional)
+#   TELEMETRYFLOW_ENVIRONMENT     - Deployment environment tag
+# =============================================================================
+
+# =============================================================================
+# TelemetryFlow Backend Connection
+# =============================================================================
+telemetryflow:
+  api_key_id: "${TELEMETRYFLOW_API_KEY_ID}"
+  api_key_secret: "${TELEMETRYFLOW_API_KEY_SECRET}"
+  endpoint: "http://host.docker.internal:3000/api/v2"
+  protocol: http
+  tls:
+    enabled: false
+    insecure_skip_verify: true
+  retry:
+    enabled: true
+    max_attempts: 3
+    initial_interval: 1s
+    max_interval: 30s
+
+# =============================================================================
+# Agent Identification
+# =============================================================================
+agent:
+  id: ""
+  hostname: ""
+  name: "${TELEMETRYFLOW_AGENT_NAME:-tfo-agent-sdk}"
+  description: "TelemetryFlow Agent - Go SDK Development Environment"
+  version: ""
+  tags:
+    environment: "${TELEMETRYFLOW_ENVIRONMENT:-development}"
+    provider: docker
+    source: tfo-go-sdk
+
+# =============================================================================
+# Heartbeat Settings
+# =============================================================================
+heartbeat:
+  interval: 60s
+  timeout: 10s
+  include_system_info: true
+
+# =============================================================================
+# Collectors (minimal set for SDK development)
+# =============================================================================
+collectors:
+  # System metrics (CPU, memory, disk, network)
+  system:
+    enabled: true
+    interval: 15s
+    cpu: true
+    memory: true
+    disk: true
+    network: true
+    disk_paths: []
+
+  # Log collection (disabled by default for SDK dev)
+  logs:
+    enabled: false
+    paths:
+      - /var/log/pods/*/*/*.log
+      - /var/log/containers/*.log
+
+  # Kubernetes (disabled - SDK dev doesn't need K8s)
+  kubernetes:
+    enabled: false
+
+# =============================================================================
+# OTLP Exporter — send telemetry to TFO-Collector
+# =============================================================================
+exporter:
+  otlp:
+    enabled: true
+    batch_size: 100
+    flush_interval: 10s
+    compression: gzip
+    endpoint_version: v2
+
+    metrics:
+      enabled: true
+      endpoint: "http://tfo-collector:4318/v2/metrics"
+
+    traces:
+      enabled: true
+      endpoint: "http://tfo-collector:4318/v2/traces"
+
+    logs:
+      enabled: true
+      endpoint: "http://tfo-collector:4318/v2/logs"
+
+# =============================================================================
+# Offline Buffer
+# =============================================================================
+buffer:
+  enabled: true
+  max_size_mb: 50
+  path: "/data/buffer"
+  max_age: 24h
+  flush_interval: 5s
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level: info
+  format: json
+  file: ""
+  max_size_mb: 50
+  max_backups: 2
+  max_age_days: 3
+  include_stack_trace: false
+  sampling_initial: 100
+  sampling_thereafter: 100

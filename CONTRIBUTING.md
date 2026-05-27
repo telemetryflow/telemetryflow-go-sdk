@@ -7,10 +7,10 @@
 
   <h3>TelemetryFlow GO SDK</h3>
 
-[![Version](https://img.shields.io/badge/Version-1.1.2-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-orange.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
-[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org/)
+[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.43.0-blueviolet)](https://opentelemetry.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OTLP-100%25%20Compliant-success?logo=opentelemetry)](https://opentelemetry.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://hub.docker.com/r/telemetryflow/telemetryflow-sdk)
 
@@ -134,12 +134,12 @@ telemetryflow-go-sdk/
 
 ### Layer Responsibilities
 
-| Layer | Responsibility | Dependencies |
-|-------|---------------|--------------|
-| **Domain** | Business logic, entities, value objects | None (pure Go) |
-| **Application** | Use cases, commands, queries | Domain only |
-| **Infrastructure** | Technical implementations, exporters | Domain, Application |
-| **Interface** | Public API (Client, Builder) | All layers |
+| Layer              | Responsibility                          | Dependencies        |
+| ------------------ | --------------------------------------- | ------------------- |
+| **Domain**         | Business logic, entities, value objects | None (pure Go)      |
+| **Application**    | Use cases, commands, queries            | Domain only         |
+| **Infrastructure** | Technical implementations, exporters    | Domain, Application |
+| **Interface**      | Public API (Client, Builder)            | All layers          |
 
 ## Making Changes
 
@@ -177,6 +177,7 @@ Fixes #123
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -323,14 +324,14 @@ Follow standard Go conventions:
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Packages | lowercase, single word | `domain`, `application` |
-| Interfaces | describe behavior | `CommandHandler`, `Exporter` |
-| Structs | PascalCase | `TelemetryConfig`, `Credentials` |
-| Methods | PascalCase (exported) | `NewCredentials`, `Handle` |
-| Methods | camelCase (unexported) | `validateConfig`, `isInitialized` |
-| Constants | PascalCase | `ProtocolGRPC`, `SignalMetrics` |
+| Type       | Convention             | Example                           |
+| ---------- | ---------------------- | --------------------------------- |
+| Packages   | lowercase, single word | `domain`, `application`           |
+| Interfaces | describe behavior      | `CommandHandler`, `Exporter`      |
+| Structs    | PascalCase             | `TelemetryConfig`, `Credentials`  |
+| Methods    | PascalCase (exported)  | `NewCredentials`, `Handle`        |
+| Methods    | camelCase (unexported) | `validateConfig`, `isInitialized` |
+| Constants  | PascalCase             | `ProtocolGRPC`, `SignalMetrics`   |
 
 ### Error Handling
 
@@ -429,4 +430,4 @@ Thank you for contributing to TelemetryFlow Go SDK!
 
 ---
 
-Built with care by the **DevOpsCorner Indonesia** community
+Built with care by the **Telemetri Data Indonesia** community

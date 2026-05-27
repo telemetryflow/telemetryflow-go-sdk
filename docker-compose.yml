@@ -3,7 +3,13 @@
 # =============================================================================
 #
 # TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
+#
+# PROFILES:
+# - dev:       Development environment (tfo-collector, tfo-agent)
+# - full:      Full observability stack (+ Prometheus)
+# - platform:  Full TFO Platform stack (+ tfo-backend, tfo-viz, postgres, clickhouse, redis, nats)
+# - example:   SDK example runners
 #
 # Usage:
 #   # Build SDK image
@@ -16,10 +22,13 @@
 #   docker-compose run --rm sdk-restapi new --name my-api
 #
 #   # Start development environment with observability stack
-#   docker-compose --profile dev up -d otel-collector jaeger
+#   docker-compose --profile dev up -d tfo-collector
 #
 #   # Start full observability stack
 #   docker-compose --profile full up -d
+#
+#   # Start full TFO Platform stack (backend + viz + infrastructure)
+#   docker-compose --profile platform up -d
 #
 # =============================================================================
 # OTLP HTTP Endpoints (Dual Ingestion Support)
@@ -43,18 +52,37 @@
 #
 # =============================================================================
 
+#================================================================================================
+# NETWORK SETUP
+#================================================================================================
+networks:
+  telemetryflow_sdk_net:
+    name: telemetryflow_sdk_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.152.0.0/16
+
+#================================================================================================
+# SERVICES
+#================================================================================================
 services:
-  # ---------------------------------------------------------------------------
+
+  #==============================================================================================
+  # SDK SERVICES
+  #==============================================================================================
+
+  #----------------------------------------------------------------------------------------------
   # SDK Generator
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
   sdk-gen:
-    container_name: ${CONTAINER_NAME:-telemetryflow-go-sdk-gen}
-    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME:-telemetryflow_sdk_gen}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-1.2.0}
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: ${VERSION:-dev}
+        VERSION: ${VERSION:-1.2.0}
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         GIT_BRANCH: ${GIT_BRANCH:-main}
         BUILD_TIME: ${BUILD_TIME:-unknown}
@@ -64,19 +92,19 @@ services:
       - ./workspace:/workspace
     working_dir: /workspace
     networks:
-      - telemetryflow-sdk
+      - telemetryflow_sdk_net
 
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
   # RESTful API Generator
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
   sdk-restapi:
-    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-go-sdk-restapi}
-    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow_sdk_restapi}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-1.2.0}
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VERSION: ${VERSION:-dev}
+        VERSION: ${VERSION:-1.2.0}
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         GIT_BRANCH: ${GIT_BRANCH:-main}
         BUILD_TIME: ${BUILD_TIME:-unknown}
@@ -85,32 +113,33 @@ services:
     environment:
       - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID:-tfk_example}
       - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET:-tfs_example}
-      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-otel-collector:4317}
+      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-tfo-collector:4317}
       - TELEMETRYFLOW_SERVICE_NAME=${TELEMETRYFLOW_SERVICE_NAME:-telemetryflow-go-sdk}
-      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.0.0}
+      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.2.0}
       - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
     volumes:
       - ./workspace:/workspace
     working_dir: /workspace
     depends_on:
-      otel-collector:
+      tfo-collector:
         condition: service_healthy
     networks:
-      - telemetryflow-sdk
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_SDK_RESTAPI:-172.152.152.10}
     profiles:
       - example
 
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
   # SDK Development Container
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
   sdk-dev:
-    container_name: ${CONTAINER_NAME_RESTAPI:-telemetryflow-go-sdk-dev}
-    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-latest}
+    container_name: ${CONTAINER_NAME_DEV:-telemetryflow_sdk_dev}
+    image: ${IMAGE_NAME:-telemetryflow/telemetryflow-go-sdk}:${IMAGE_TAG:-1.2.0}
     build:
       context: .
       dockerfile: Dockerfile.dev
       args:
-        VERSION: ${VERSION:-dev}
+        VERSION: ${VERSION:-1.2.0}
         GIT_COMMIT: ${GIT_COMMIT:-unknown}
         GIT_BRANCH: ${GIT_BRANCH:-main}
         BUILD_TIME: ${BUILD_TIME:-unknown}
@@ -119,64 +148,83 @@ services:
     environment:
       - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID:-tfk_example}
       - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET:-tfs_example}
-      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-otel-collector:4317}
+      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_ENDPOINT:-tfo-collector:4317}
       - TELEMETRYFLOW_SERVICE_NAME=${TELEMETRYFLOW_SERVICE_NAME:-telemetryflow-go-sdk-dev}
-      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.0.0}
+      - TELEMETRYFLOW_SERVICE_VERSION=${TELEMETRYFLOW_SERVICE_VERSION:-1.2.0}
       - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
     volumes:
       - .:/app
       - ./workspace:/workspace
     working_dir: /app
     depends_on:
-      otel-collector:
+      tfo-collector:
         condition: service_healthy
     networks:
-      - telemetryflow-sdk
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_SDK_DEV:-172.152.152.11}
     profiles:
       - dev
 
-  # ---------------------------------------------------------------------------
-  # OpenTelemetry Collector (for local development)
-  # ---------------------------------------------------------------------------
+  #==============================================================================================
+  # MONITORING SERVICES (aligned with TFO-Platform)
+  #==============================================================================================
+
+  #----------------------------------------------------------------------------------------------
+  # TFO-COLLECTOR - TelemetryFlow Collector (OCB Native v1.2.1)
+  #----------------------------------------------------------------------------------------------
   # Supports dual ingestion: v1 (OTEL standard) and v2 (TelemetryFlow enhanced)
-  otel-collector:
-    profiles:
-      - dev
-      - full
-      - example
+  #
+  # OTLP HTTP Endpoints:
+  #   TelemetryFlow Platform (Recommended - TFO Standalone):
+  #     POST http://localhost:4318/v2/traces
+  #     POST http://localhost:4318/v2/metrics
+  #     POST http://localhost:4318/v2/logs
+  #
+  #   OTEL Community (Backwards Compatible - OCB/Standard):
+  #     POST http://localhost:4318/v1/traces
+  #     POST http://localhost:4318/v1/metrics
+  #     POST http://localhost:4318/v1/logs
+  #
+  #   gRPC (Both versions via same port): localhost:4317
+  #----------------------------------------------------------------------------------------------
+  tfo-collector:
+    profiles: ["dev", "full", "example"]
     platform: linux/amd64
     # =============================================================================
-    # TelemetryFlow Collector (TFO-Collector) - TFO format with OTLP support (v1.1.2+)
-    image: telemetryflow/telemetryflow-collector:${TFO_VERSION:-latest}
+    # TelemetryFlow Collector (TFO-Collector) - Custom TFO format (v1.2.1)
+    image: telemetryflow/telemetryflow-collector:${TFO_COLLECTOR_VERSION:-1.2.1}
     command: ["--config=/etc/tfo-collector/tfo-collector.yaml"]
     # =============================================================================
-    # TelemetryFlow Collector OCB (TFO-Collector-OCB) - Standard OTEL format
-    # image: telemetryflow/telemetryflow-collector:${TFO_VERSION:-latest}
-    # command: ["--config=/etc/tfo-collector/otel-collector.yaml"]
-    # =============================================================================
-    # OTEL Collector Community Contributor (Standard OTEL format)
+    # OTEL Collector Community Contributor (Standard OTEL format - uncomment to use)
     # image: otel/opentelemetry-collector-contrib:${OTEL_VERSION:-0.142.0}
     # command: ["--config=/etc/otelcol-contrib/config.yaml"]
     # =============================================================================
-    container_name: ${CONTAINER_OTEL:-otel-collector-dev}
+    container_name: ${CONTAINER_OTEL:-telemetryflow_sdk_tfo_collector}
     restart: unless-stopped
+    environment:
+      # Backend endpoint for tfo exporter (host.docker.internal → host)
+      - TELEMETRYFLOW_ENDPOINT=${TELEMETRYFLOW_BACKEND_ENDPOINT:-http://host.docker.internal:3000}
+      # API keys for tfoauth extension
+      - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID}
+      - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET}
+      # Collector identity
+      - TELEMETRYFLOW_COLLECTOR_ID=${CONTAINER_OTEL:-telemetryflow_sdk_tfo_collector}
+      - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
     volumes:
       # TelemetryFlow Collector config (Custom TFO format)
       - ./configs/tfo-collector.yaml:/etc/tfo-collector/tfo-collector.yaml:ro
       # =============================================================================
-      # TelemetryFlow Collector OCB config (Standard OTEL format)
-      # - ./configs/otel-collector.yaml:/etc/tfo-collector/otel-collector.yaml:ro
-      # =============================================================================
-      # OTEL Collector Community Contributor config (Standard OTEL format)
+      # OTEL Community Collector config (uncomment if using otel/opentelemetry-collector-contrib image)
       # - ./configs/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
     ports:
-      - "${OTLP_GRPC_PORT:-4317}:4317"               # OTLP gRPC (v1 & v2)
-      - "${OTLP_HTTP_PORT:-4318}:4318"               # OTLP HTTP (v1 & v2)
-      - "${OTEL_METRICS_PORT:-8888}:8888"            # Prometheus metrics (self)
-      - "${PROMETHEUS_EXPORTER_PORT:-8889}:8889"     # Prometheus exporter
-      - "${OTEL_HEALTH_PORT:-13133}:13133"           # Health check
-      - "${ZPAGES_PORT:-55679}:55679"                # zPages
-      - "${PPROF_PORT:-1777}:1777"                   # pprof
+      - "${PORT_OTEL_GRPC:-4317}:4317"     # OTLP gRPC (v1 & v2)
+      - "${PORT_OTEL_HTTP:-4318}:4318"     # OTLP HTTP (v1 & v2)
+      - "${PORT_OTEL_METRICS:-8889}:8889"  # Prometheus exporter
+      - "${PORT_OTEL_HEALTH:-13133}:13133" # Health check
+      - "${PORT_OTEL_ZPAGES:-55679}:55679" # zPages
+      - "${PORT_OTEL_PPROF:-1777}:1777"    # pprof
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133"]
       interval: 10s
@@ -184,34 +232,66 @@ services:
       retries: 5
       start_period: 10s
     networks:
-      - telemetryflow-sdk
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_OTEL:-172.152.152.30}
 
-  # ---------------------------------------------------------------------------
-  # Jaeger (for trace visualization)
-  # ---------------------------------------------------------------------------
-  jaeger:
-    container_name: jaeger-dev
-    image: jaegertracing/jaeger:${JAEGER_VERSION:-2.13.0}
+  #----------------------------------------------------------------------------------------------
+  # TFO-AGENT - TelemetryFlow Host Metrics Agent (v1.2.0)
+  #   Collects host-level metrics (CPU, memory, disk, network) and sends heartbeats
+  #   to the backend API. Replaces Prometheus for infrastructure monitoring.
+  #----------------------------------------------------------------------------------------------
+  tfo-agent:
+    profiles: ["dev", "full"]
+    platform: linux/amd64
+    image: telemetryflow/telemetryflow-agent:${TFO_AGENT_VERSION:-1.2.0}
+    container_name: ${CONTAINER_TFO_AGENT:-telemetryflow_sdk_tfo_agent}
+    hostname: ${TFO_AGENT_HOSTNAME:-tfo-agent-sdk}
+    restart: unless-stopped
     ports:
-      - "${JAEGER_UI_PORT:-16686}:16686"   # Jaeger UI
-      - "${JAEGER_HTTP_PORT:-14268}:14268" # Jaeger HTTP collector
-      - "${JAEGER_GRPC_PORT:-14250}:14250" # Jaeger gRPC
+      - "${PORT_TFO_AGENT:-9191}:9191"   # Health & metrics endpoint
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
+      - TZ=${TZ:-UTC}
+      # Platform backend for heartbeat/registration (host.docker.internal → host port 3000)
+      - TELEMETRYFLOW_ENDPOINT=http://host.docker.internal:3000/api/v2
+      # OTLP data goes through the collector (collector forwards to backend via tfo exporter)
+      - TELEMETRYFLOW_OTLP_ENDPOINT=http://tfo-collector:4318
+      - TELEMETRYFLOW_API_KEY_ID=${TELEMETRYFLOW_API_KEY_ID}
+      - TELEMETRYFLOW_API_KEY_SECRET=${TELEMETRYFLOW_API_KEY_SECRET}
+      - TELEMETRYFLOW_AGENT_ID=${CONTAINER_TFO_AGENT:-telemetryflow_sdk_tfo_agent}
+      - TELEMETRYFLOW_AGENT_NAME=TFO SDK Agent
+      - TELEMETRYFLOW_ENVIRONMENT=${TELEMETRYFLOW_ENVIRONMENT:-development}
+      # Intervals
+      - TFO_AGENT_HEARTBEAT_INTERVAL=${TFO_AGENT_HEARTBEAT_INTERVAL:-60s}
+      - TFO_AGENT_METRICS_INTERVAL=${TFO_AGENT_METRICS_INTERVAL:-30s}
+    volumes:
+      - ./configs/tfo-agent.yaml:/etc/tfo-agent/tfo-agent.yaml:ro
+      - tfo-agent-data:/data
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/log:/var/log:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      tfo-collector:
+        condition: service_healthy
     networks:
-      - telemetryflow-sdk
-    profiles:
-      - dev
-      - full
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_TFO_AGENT:-172.152.152.35}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:13133/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
-  # ---------------------------------------------------------------------------
-  # Prometheus (for metrics visualization)
-  # ---------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
+  # PROMETHEUS (for metrics visualization)
+  #----------------------------------------------------------------------------------------------
   prometheus:
-    container_name: prometheus-dev
+    container_name: ${CONTAINER_PROMETHEUS:-telemetryflow_sdk_prometheus}
     image: prom/prometheus:${PROMETHEUS_VERSION:-v2.54.1}
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PORT_PROMETHEUS:-9090}:9090"
     volumes:
       - ./configs/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -220,43 +300,240 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.enable-lifecycle'
     networks:
-      - telemetryflow-sdk
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_PROMETHEUS:-172.152.152.70}
     profiles:
       - full
 
-  # ---------------------------------------------------------------------------
-  # Grafana (for dashboards)
-  # ---------------------------------------------------------------------------
-  grafana:
-    container_name: grafana-dev
-    image: grafana/grafana:${GRAFANA_VERSION:-11.4.0}
+  #==============================================================================================
+  # PLATFORM SERVICES (aligned with TFO-Platform monolith)
+  #==============================================================================================
+
+  #----------------------------------------------------------------------------------------------
+  # POSTGRESQL - Relational Data Storage (Config, Entities, IAM)
+  #----------------------------------------------------------------------------------------------
+  postgres:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
+    container_name: ${CONTAINER_POSTGRES:-telemetryflow_sdk_postgres}
+    restart: unless-stopped
     ports:
-      - "${GRAFANA_PORT:-3000}:3000"
+      - "${PORT_POSTGRES:-5432}:5432"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - TZ=${TZ:-UTC}
+      - POSTGRES_USER=${POSTGRES_USERNAME:-tfo_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-telemetryflow123}
+      - POSTGRES_DB=${POSTGRES_DB:-telemetryflow_db}
+      - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - grafana-data:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${DATA_POSTGRESQL:-${VOLUMES_BASE_PATH:-/opt/data/docker/telemetryflow-sdk}/postgresql}:/var/lib/postgresql/data
     networks:
-      - telemetryflow-sdk
-    profiles:
-      - full
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_POSTGRES:-172.152.153.20}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME:-tfo_admin} -d ${POSTGRES_DB:-telemetryflow_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
-# -----------------------------------------------------------------------------
-# Volumes
-# -----------------------------------------------------------------------------
+  #----------------------------------------------------------------------------------------------
+  # CLICKHOUSE - Time-Series & Analytics Storage (Metrics, Logs, Traces, Audit)
+  #----------------------------------------------------------------------------------------------
+  clickhouse:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: clickhouse/clickhouse-server:${CLICKHOUSE_VERSION:-latest}
+    container_name: ${CONTAINER_CLICKHOUSE:-telemetryflow_sdk_clickhouse}
+    restart: unless-stopped
+    ports:
+      - "${PORT_CLICKHOUSE_HTTP:-8123}:8123"    # HTTP
+      - "${PORT_CLICKHOUSE_NATIVE:-9000}:9000"  # Native
+    environment:
+      - TZ=${TZ:-UTC}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB:-telemetryflow_db}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-tfo_admin}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-telemetryflow123}
+    volumes:
+      - ${DATA_CLICKHOUSE:-${VOLUMES_BASE_PATH:-/opt/data/docker/telemetryflow-sdk}/clickhouse}/data:/var/lib/clickhouse
+      - ${DATA_CLICKHOUSE:-${VOLUMES_BASE_PATH:-/opt/data/docker/telemetryflow-sdk}/clickhouse}/logs:/var/log/clickhouse-server
+    networks:
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_CLICKHOUSE:-172.152.153.40}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  #----------------------------------------------------------------------------------------------
+  # REDIS - Cache (L2), Session Store, BullMQ Job Queues
+  #----------------------------------------------------------------------------------------------
+  redis:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: ${CONTAINER_REDIS:-telemetryflow_sdk_redis}
+    restart: unless-stopped
+    ports:
+      - "${PORT_REDIS:-6379}:6379"
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAX_MEMORY:-512mb}
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - ${DATA_REDIS:-${VOLUMES_BASE_PATH:-/opt/data/docker/telemetryflow-sdk}/redis}:/data
+    networks:
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_REDIS:-172.152.153.50}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  #----------------------------------------------------------------------------------------------
+  # NATS - Cross-Module Domain Event Messaging
+  #----------------------------------------------------------------------------------------------
+  nats:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: nats:${NATS_VERSION:-2-alpine}
+    container_name: ${CONTAINER_NATS:-telemetryflow_sdk_nats}
+    restart: unless-stopped
+    ports:
+      - "${PORT_NATS_CLIENT:-4222}:4222"   # Client connections
+      - "${PORT_NATS_MONITOR:-8222}:8222"  # HTTP monitoring
+    command: ["--js", "--sd", "/data", "-m", "8222"]
+    volumes:
+      - ${DATA_NATS:-${VOLUMES_BASE_PATH:-/opt/data/docker/telemetryflow-sdk}/nats}:/data
+    networks:
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_NATS:-172.152.153.55}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  #----------------------------------------------------------------------------------------------
+  # TFO-BACKEND - NestJS API
+  #   Receives telemetry from TFO-Collector via tfo exporter, stores in ClickHouse
+  #   Provides REST API for TFO-Viz frontend
+  #----------------------------------------------------------------------------------------------
+  tfo-backend:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: telemetryflow/telemetryflow-platform:${TFO_PLATFORM_VERSION:-1.4.0}
+    container_name: ${CONTAINER_BACKEND:-telemetryflow_sdk_backend}
+    restart: unless-stopped
+    ports:
+      - "${PORT_BACKEND:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3000
+      - TZ=${TZ:-UTC}
+
+      # PostgreSQL
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-telemetryflow_db}
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME:-tfo_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-telemetryflow123}
+
+      # ClickHouse
+      - CLICKHOUSE_HOST=clickhouse
+      - CLICKHOUSE_PORT=8123
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB:-telemetryflow_db}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-tfo_admin}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-telemetryflow123}
+
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_MAX_MEMORY=${REDIS_MAX_MEMORY:-512mb}
+      - REDIS_DB_SESSION=0
+      - REDIS_DB_CACHE=1
+      - REDIS_DB_BULLMQ=2
+
+      # NATS
+      - NATS_URL=nats://nats:4222
+
+      # BullMQ
+      - ENABLE_BULLMQ=${ENABLE_BULLMQ:-true}
+
+      # JWT & Session
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-me-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - SESSION_SECRET=${SESSION_SECRET:-dev-session-secret-change-me}
+
+      # CORS
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+
+      # Logging
+      - LOGGER_TYPE=${LOGGER_TYPE:-winston}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_PRETTY_PRINT=${LOG_PRETTY_PRINT:-false}
+
+      # OpenTelemetry (disabled — SDK dev uses collector directly)
+      - OTEL_ENABLED=false
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-telemetryflow-platform}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    networks:
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_BACKEND:-172.152.153.10}
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  #----------------------------------------------------------------------------------------------
+  # TFO-VIZ - Vue 3 SPA Frontend (Nginx)
+  #   Telemetry visualization dashboard — proxies /api to tfo-backend
+  #----------------------------------------------------------------------------------------------
+  tfo-viz:
+    profiles: ["platform"]
+    platform: linux/amd64
+    image: telemetryflow/telemetryflow-viz:${TFO_PLATFORM_VERSION:-1.4.0}
+    container_name: ${CONTAINER_FRONTEND:-telemetryflow_sdk_frontend}
+    restart: unless-stopped
+    ports:
+      - "${PORT_FRONTEND:-8080}:80"
+    depends_on:
+      tfo-backend:
+        condition: service_healthy
+    networks:
+      telemetryflow_sdk_net:
+        ipv4_address: ${CONTAINER_IP_FRONTEND:-172.152.153.15}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+#================================================================================================
+# VOLUMES
+#================================================================================================
 volumes:
   prometheus-data:
     driver: local
-  grafana-data:
+  tfo-agent-data:
     driver: local
-
-# -----------------------------------------------------------------------------
-# Networks
-# -----------------------------------------------------------------------------
-networks:
-  telemetryflow-sdk:
-    driver: bridge
-    name: telemetryflow-go-sdk-network

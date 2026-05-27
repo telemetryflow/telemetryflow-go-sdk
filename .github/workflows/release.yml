@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # TelemetryFlow Go SDK - Community Enterprise Observability Platform (CEOP)
-# Copyright (c) 2024-2026 DevOpsCorner Indonesia. All rights reserved.
+# Copyright (c) 2024-2026 Telemetri Data Indonesia. All rights reserved.
 #
 # This workflow builds and releases TelemetryFlow Go SDK generators:
 # - telemetryflow-gen: SDK code generator
@@ -39,9 +39,9 @@ on:
         default: false
 
 env:
-  GO_VERSION: '1.24'
+  GO_VERSION: '1.26'
   PRODUCT_NAME: TelemetryFlow Go SDK
-  VENDOR: DevOpsCorner Indonesia
+  VENDOR: Telemetri Data Indonesia
   MAINTAINER: support@telemetryflow.id
   DESCRIPTION: Enterprise-grade Go SDK for TelemetryFlow - the observability platform that provides unified metrics, logs, and traces collection following OpenTelemetry standards.
   LICENSE: Apache-2.0
@@ -65,7 +65,7 @@ jobs:
       build_time: ${{ steps.version.outputs.build_time }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -94,10 +94,10 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -113,7 +113,7 @@ jobs:
           GOARCH: ${{ matrix.arch }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binaries-linux-${{ matrix.arch }}
           path: dist/
@@ -131,10 +131,10 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -150,7 +150,7 @@ jobs:
           GOARCH: ${{ matrix.arch }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binaries-darwin-${{ matrix.arch }}
           path: dist/
@@ -165,10 +165,10 @@ jobs:
     needs: prepare
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
@@ -184,7 +184,7 @@ jobs:
           GOARCH: amd64
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: binaries-windows-amd64
           path: dist/
@@ -212,10 +212,10 @@ jobs:
           sudo apt-get install -y rpm
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binaries-linux-${{ matrix.arch }}
           path: dist
@@ -284,7 +284,7 @@ jobs:
                    -bb rpmbuild/SPECS/telemetryflow-sdk.spec
 
       - name: Upload RPM artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: rpm-${{ matrix.arch }}
           path: rpmbuild/RPMS/**/*.rpm
@@ -302,10 +302,10 @@ jobs:
         arch: [amd64, arm64]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binaries-linux-${{ matrix.arch }}
           path: dist
@@ -371,7 +371,7 @@ jobs:
           mv ${PKG_DIR}.deb packages/
 
       - name: Upload DEB artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deb-${{ matrix.arch }}
           path: packages/*.deb
@@ -386,10 +386,10 @@ jobs:
     needs: [prepare, build-windows]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binaries-windows-amd64
           path: dist
@@ -489,14 +489,14 @@ jobs:
           Documentation: https://docs.telemetryflow.id
           Support: support@telemetryflow.id
 
-          Copyright (c) 2024-2026 DevOpsCorner Indonesia
+          Copyright (c) 2024-2026 Telemetri Data Indonesia
           EOF
 
           # Create ZIP
           zip -r telemetryflow-sdk-${VERSION}-windows-amd64.zip ${PKG_DIR}
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-amd64
           path: telemetryflow-sdk-*.zip
@@ -521,10 +521,10 @@ jobs:
             display_name: Apple Silicon
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binaries-darwin-${{ matrix.arch }}
           path: dist
@@ -606,7 +606,7 @@ jobs:
           Documentation: https://docs.telemetryflow.id
           Support: support@telemetryflow.id
 
-          Copyright (c) 2024-2026 DevOpsCorner Indonesia
+          Copyright (c) 2024-2026 Telemetri Data Indonesia
           EOF
 
       - name: Create DMG
@@ -635,7 +635,7 @@ jobs:
                          "${DMG_NAME}"
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dmg-${{ matrix.arch }}
           path: telemetryflow-sdk-*.dmg
@@ -661,10 +661,10 @@ jobs:
             arch: arm64
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: binaries-${{ matrix.os }}-${{ matrix.arch }}
           path: dist
@@ -700,7 +700,7 @@ jobs:
           tar -czvf "${PKG_NAME}.tar.gz" "${PKG_NAME}"
 
       - name: Upload tarball
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: tarball-${{ matrix.os }}-${{ matrix.arch }}
           path: telemetryflow-sdk-*.tar.gz
@@ -721,40 +721,40 @@ jobs:
       - package-tarball
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Download RPM packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: rpm-*
           path: artifacts/rpm
           merge-multiple: true
 
       - name: Download DEB packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: deb-*
           path: artifacts/deb
           merge-multiple: true
 
       - name: Download Windows packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: windows-*
           path: artifacts/windows
           merge-multiple: true
 
       - name: Download macOS DMG packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: dmg-*
           path: artifacts/dmg
           merge-multiple: true
 
       - name: Download tarballs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: tarball-*
           path: artifacts/tarball
@@ -822,7 +822,7 @@ jobs:
           fi
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: "${{ env.PRODUCT_NAME }} v${{ needs.prepare.outputs.version }}"
           tag_name: "v${{ needs.prepare.outputs.version }}"

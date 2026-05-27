@@ -7,10 +7,10 @@
 
   <h3>TelemetryFlow GO SDK</h3>
 
-[![Version](https://img.shields.io/badge/Version-1.1.2-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.2.0-orange.svg)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
-[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.39.0-blueviolet)](https://opentelemetry.io/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org/)
+[![OTEL SDK](https://img.shields.io/badge/OpenTelemetry_SDK-1.43.0-blueviolet)](https://opentelemetry.io/)
 [![OpenTelemetry](https://img.shields.io/badge/OTLP-100%25%20Compliant-success?logo=opentelemetry)](https://opentelemetry.io/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://hub.docker.com/r/telemetryflow/telemetryflow-sdk)
 
@@ -28,6 +28,90 @@ All notable changes to the TelemetryFlow Go SDK will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.2.0] - 2026-05-27
+
+### Changed
+
+#### Go 1.26+ & Dependency Updates
+
+- **Go Version**: Updated minimum Go version from 1.24 to 1.26
+  - `go.mod`: `go 1.26.0` with `toolchain go1.26.3`
+  - Dockerfiles: `golang:1.26-alpine` builder image
+
+- **OpenTelemetry Go SDK**: Upgraded from v1.39.0 to v1.43.0
+  - `go.opentelemetry.io/otel` v1.43.0
+  - `go.opentelemetry.io/otel/sdk` v1.43.0
+  - `go.opentelemetry.io/otel/sdk/metric` v1.43.0
+  - `go.opentelemetry.io/otel/metric` v1.43.0
+  - `go.opentelemetry.io/otel/trace` v1.43.0
+  - All OTLP exporters (gRPC/HTTP) v1.43.0
+
+- **gRPC**: Upgraded from v1.78.0 to v1.81.1
+- **grpc-gateway**: Upgraded from v2.27.4 to v2.29.0
+- **zap**: Upgraded from v1.27.1 to v1.28.0
+- **golang.org/x/net**: Upgraded from v0.48.0 to v0.55.0
+- **golang.org/x/sys**: Upgraded from v0.39.0 to v0.45.0
+- **golang.org/x/text**: Upgraded from v0.32.0 to v0.37.0
+
+### Fixed
+
+#### Security Vulnerability Patches
+
+- **GO-2026-4985**: Fixed oversized OTLP HTTP response bodies causing memory exhaustion
+  - Patched in `go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp` v1.43.0
+  - Patched in `go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp` v1.43.0
+
+- **GO-2026-4394**: Fixed arbitrary code execution via PATH hijacking in OpenTelemetry Go SDK
+  - Patched in `go.opentelemetry.io/otel/sdk` v1.40.0+ (included in v1.43.0)
+
+### Added
+
+#### TFO-Collector v1.2.1 & TFO-Agent v1.2.0 Synchronization
+
+- **TFO-Collector v1.2.1 Alignment**: Updated all configurations for latest collector
+  - Updated `configs/tfo-collector.yaml` header to v1.2.1
+  - Updated `configs/tfo-collector-unified.yaml` User-Agent to v1.2.1
+  - Updated `configs/sdk-default.yaml` version references to v1.2.1
+  - Updated `configs/sdk-v2-only.yaml` version references to v1.2.1
+
+- **TFO-Agent v1.2.0 Support**: Added TFO-Agent version tracking
+  - Added `TFO_AGENT_VERSION` to Makefile (v1.2.0)
+  - Updated `.env.example` with TFO-Agent compatibility note
+
+- **Generator Templates**: Updated all code generator templates
+  - `cmd/generator/templates/env.tpl`: Updated TFO-Collector reference to v1.2.1
+  - `cmd/generator/templates/init.go.tpl`: Updated SDK version to v1.2.0, TFO-Collector to v1.2.1
+  - `cmd/generator-restfulapi/templates/telemetry/init.go.tpl`: Updated version references
+  - `cmd/generator-restfulapi/templates/project/go.mod.tpl`: Updated Go 1.26 + SDK v1.2.0
+  - `cmd/generator-restfulapi/templates/project/Dockerfile.tpl`: Updated to golang:1.26-alpine
+  - `cmd/generator-restfulapi/templates/project/.env.example.tpl`: Updated version references
+
+- **Docker Compose**: Updated collector image references
+  - `docker-compose.yml`: Updated TFO-Collector comment to v1.2.1
+  - `docker-compose.e2e.yml`: Updated TFO-Collector comment to v1.2.1
+
+### Tests
+
+- Updated test fixtures to reflect new SDK version (1.2.0)
+- Updated banner test assertion for default config version
+
+### Documentation
+
+- Updated all badge versions in README.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md
+- Updated docs/ARCHITECTURE.md, docs/QUICKSTART.md, docs/API_REFERENCE.md version headers
+- Updated docs/BUILD-SYSTEM.md Makefile version references
+- Updated docs/README.md, docs/TESTING.md version headers
+
+### Compatibility
+
+- TFO-Collector: v1.2.1 (OCB-native)
+- TFO-Agent: v1.2.0
+- OpenTelemetry Collector: v0.142.0
+- OpenTelemetry Go SDK: v1.43.0
+- Go: 1.26+
+
+---
 
 ## [1.1.2] - 2026-01-04
 
@@ -417,6 +501,7 @@ service:
 ### Added
 
 #### Docker Support
+
 - Multi-stage `Dockerfile` for building SDK generators with minimal image size
 - `docker-compose.yml` for development environment with:
   - OpenTelemetry Collector
@@ -431,6 +516,7 @@ service:
   - Redis for caching tests
 
 #### Documentation Enhancements
+
 - Mermaid diagrams added to all documentation files:
   - `ARCHITECTURE.md`: SDK layer diagram, telemetry flow, and component relationships
   - `API_REFERENCE.md`: Package overview diagram
@@ -440,6 +526,7 @@ service:
 - New documentation file: `GENERATOR_RESTAPI.md` - comprehensive RESTful API generator docs
 
 #### Testing Infrastructure
+
 - Unit tests for infrastructure layer:
   - `template_test.go`: Template functions and execution tests
   - `config_test.go`: Configuration file handling tests
@@ -464,6 +551,7 @@ service:
   - `docs/assets/tfo-logo-sdk-light.svg`
 
 #### Configuration Files
+
 - `configs/otel-collector.yaml`: Production-ready OTEL Collector configuration
 - `configs/prometheus.yaml`: Prometheus scrape configuration
 
@@ -487,41 +575,49 @@ service:
 ### Added
 
 #### Core SDK
+
 - `telemetryflow.Client`: Main SDK client for telemetry operations
 - `telemetryflow.NewFromEnv()`: Environment-based client initialization
 - `telemetryflow.NewBuilder()`: Builder pattern for client configuration
 
 #### Domain Layer (DDD)
+
 - `Credentials`: Immutable API key pair value object with validation
 - `TelemetryConfig`: Aggregate root for SDK configuration
 - Support for gRPC and HTTP OTLP protocols
 
 #### Application Layer (CQRS)
+
 - Commands: `RecordMetricCommand`, `EmitLogCommand`, `StartSpanCommand`, `EndSpanCommand`
 - Queries: `GetMetricQuery`, `GetLogsQuery`, `GetTraceQuery`
 - Command and Query bus implementations
 
 #### Infrastructure Layer
+
 - `OTLPExporterFactory`: Creates OTLP exporters for metrics, logs, and traces
 - `TelemetryCommandHandler`: Handles telemetry commands
 - OpenTelemetry SDK integration with automatic batching
 
 #### Metrics
+
 - `IncrementCounter()`: Counter metric recording
 - `RecordGauge()`: Gauge metric recording
 - `RecordHistogram()`: Histogram metric recording with units
 
 #### Logs
+
 - `LogInfo()`, `LogWarn()`, `LogError()`, `LogDebug()`: Structured logging at various levels
 - Attribute support for log enrichment
 
 #### Traces
+
 - `StartSpan()`: Create new spans with attributes
 - `EndSpan()`: Complete spans with optional error status
 - `AddSpanEvent()`: Add events to active spans
 - Context propagation support
 
 #### Code Generator (`telemetryflow-gen`)
+
 - `init`: Initialize TelemetryFlow integration in projects
 - `example`: Generate example code (http-server, worker, grpc-server, basic)
 - `config`: Generate configuration files
@@ -529,6 +625,7 @@ service:
 - Custom template support with `--template-dir`
 
 #### RESTful API Generator (`telemetryflow-restapi`)
+
 - `new`: Create complete DDD + CQRS RESTful API projects
 - `entity`: Generate entities with repository, handlers, and migrations
 - `docs`: Regenerate API documentation
@@ -540,6 +637,7 @@ service:
 - PostgreSQL, MySQL, and SQLite support
 
 #### Configuration
+
 - Environment variable support (`TELEMETRYFLOW_*`)
 - `.env.telemetryflow` configuration file support
 - Protocol selection (gRPC/HTTP)
@@ -549,6 +647,7 @@ service:
 - Custom resource attributes
 
 ### Documentation
+
 - `ARCHITECTURE.md`: SDK architecture with DDD/CQRS patterns
 - `API_REFERENCE.md`: Complete API documentation
 - `QUICKSTART.md`: Getting started guide
@@ -566,6 +665,7 @@ service:
 The 1.0.0 release is a complete rewrite with breaking changes:
 
 1. **Client Initialization**:
+
    ```go
    // Old (0.x)
    client := telemetryflow.NewClient(config)
@@ -579,6 +679,7 @@ The 1.0.0 release is a complete rewrite with breaking changes:
    ```
 
 2. **Metric Recording**:
+
    ```go
    // Old (0.x)
    client.RecordMetric("name", value, tags)
@@ -589,6 +690,7 @@ The 1.0.0 release is a complete rewrite with breaking changes:
    ```
 
 3. **Logging**:
+
    ```go
    // Old (0.x)
    client.Log(level, message, fields)
@@ -599,6 +701,7 @@ The 1.0.0 release is a complete rewrite with breaking changes:
    ```
 
 4. **Tracing**:
+
    ```go
    // Old (0.x)
    span := client.StartTrace("name")
@@ -615,7 +718,7 @@ None at this time.
 
 ### Contributors
 
-- DevOpsCorner Indonesia Team
+- Telemetri Data Indonesia Team
 
 ---
 

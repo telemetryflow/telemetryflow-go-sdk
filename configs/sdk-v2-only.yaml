@@ -4,7 +4,7 @@
 # This configuration enables TFO v2-only mode for maximum TelemetryFlow Platform
 # integration. All telemetry is sent via v2 endpoints with full authentication.
 #
-# Compatible with TFO-Collector v1.1.2 (OCB-native) in v2_only mode
+# Compatible with TFO-Collector v1.2.1 (OCB-native) in v2_only mode
 #
 # Usage in Go:
 #   client, err := telemetryflow.NewBuilder().
@@ -24,8 +24,8 @@
 # -----------------------------------------------------------------------------
 # SDK Version Info
 # -----------------------------------------------------------------------------
-version: "1.1.2"
-tfo_collector_version: "1.1.2"
+version: "1.2.0"
+tfo_collector_version: "1.2.1"
 otel_version: "0.142.0"
 
 # -----------------------------------------------------------------------------
@@ -85,7 +85,7 @@ collector:
   datacenter: "${TELEMETRYFLOW_DATACENTER:default}"
   enrich_resources: true
   tags:
-    sdk_version: "1.1.2"
+    sdk_version: "1.2.0"
     sdk_language: "go"
     mode: "v2-only"
 

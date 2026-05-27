@@ -2,7 +2,7 @@
 # TelemetryFlow Configuration
 # =============================================================================
 # Generated for: {{.ProjectName}}
-# Compatible with TFO-Collector v1.1.2 (OCB-native)
+# Compatible with TFO-Collector v1.2.1 (OCB-native) & TFO-Agent v1.2.0
 # =============================================================================
 
 # -----------------------------------------------------------------------------
