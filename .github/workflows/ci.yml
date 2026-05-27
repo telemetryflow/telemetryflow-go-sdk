@@ -128,7 +128,7 @@ jobs:
         run: make test-unit-ci
 
       - name: Upload unit test coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-unit
           path: coverage-unit.out
@@ -159,7 +159,7 @@ jobs:
         run: make test-integration-ci
 
       - name: Upload integration test coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-integration
           path: coverage-integration.out
@@ -336,7 +336,7 @@ jobs:
           mv coverage.html coverage/coverage.html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/

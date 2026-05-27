@@ -307,7 +307,7 @@ jobs:
 
       - name: Upload SBOM
         if: needs.prepare.outputs.push == 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: sbom-${{ needs.prepare.outputs.commit }}
           path: sbom-*.spdx.json
