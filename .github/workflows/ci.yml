@@ -307,13 +307,13 @@ jobs:
           cache: true
 
       - name: Download unit coverage
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage-unit
           path: coverage/
 
       - name: Download integration coverage
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage-integration
           path: coverage/
